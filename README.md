@@ -3,31 +3,19 @@
 
 > Écho est le chatbot culturel développé par Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
+## Objectif
+
+Concevoir un système RAG capable de répondre à des questions à partir d’événements collectés via OpenAgenda.
+
+Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis nettoyées, indexées avec FAISS et utilisées par le chatbot Écho pour générer des réponses contextualisées.
 
 ## Sommaire
 
 - [Objectif](#objectif)
-- [Données utilisées](#données-utilisées)
 - [Stack technique](#stack-technique)
 - [Structure du projet](#structure-du-projet)
 - [Installation](#installation)
-- [Variables d'environnement](#variables-denvironnement)
-- [Vérification de l'environnement](#vérification-de-lenvironnement)
-- [Qualité du code](#qualité-du-code)
-- [Rapport technique](#rapport-technique)
-
-
-## Objectif
-
-Ce projet a pour objectif de concevoir un système RAG capable de répondre à des questions à partir de données collectées via OpenAgenda.
-
-## Données utilisées
-
-Les données utilisées proviennent d'OpenAgenda, via l'API Opendatasoft.
-
-Elles correspondent à des événements culturels qui seront collectés, nettoyés puis indexés pour alimenter le système RAG.
-
-À ce stade du projet, l’API OpenAgenda a été explorée et un premier échantillon brut peut être sauvegardé. Le README sera enrichi progressivement avec les commandes de collecte complète des données et de reconstruction de l’index FAISS.
+- [Commandes utiles](#commandes-utiles)
 
 ## Stack technique
 
@@ -40,6 +28,12 @@ L'application s'appuiera notamment sur :
 - Mistral AI pour le modèle de langage
 - FastAPI pour l'exposition d'une API
 
+Le rapport technique du projet sera rédigé dans :
+
+```text
+docs/rapport_technique.md
+```
+
 ## Structure du projet
 
 ```text
@@ -51,9 +45,10 @@ oc_project9_rag/
 ├── docs/                 # Documentation projet et notes de démonstration
 ├── notebooks/            # Notebooks d'exploration et d'analyse
 ├── scripts/              # Scripts exécutables ponctuels
+│   └── fetch_openagenda_events.py  # Récupération des événements OpenAgenda bruts
 ├── src/                  # Code commun et fonctions utilitaires
-│   ├── config.py         # constantes, chemins, variables d'env
-│   ├── openagenda.py     # fonctions liées à l'API OpenAgenda   
+│   ├── config.py         # Constantes, chemins et paramètres de collecte
+│   ├── openagenda.py     # Client simple pour l'API OpenAgenda
 │   └── utils/io.py       # Fonctions simples d'entrée / sortie
 ├── echo_app/             # Application principale Écho
 │   ├── config.py         # Configuration spécifique à l'application
@@ -71,81 +66,50 @@ Les dossiers `data/` et `vector_store/` contiennent des fichiers générés ou v
 
 ## Installation
 
+### Poetry  
 Installer les dépendances du projet avec Poetry :
 
 ```bash
 poetry install --no-root
-```
 
-Vérifier la version de Python utilisée :
-
-```bash
+# La version attendue est Python 3.12.
 poetry run python --version
 ```
+### Variables d'environnement
 
-La version attendue est Python 3.12.
-
-## Variables d'environnement
-
-Créer un fichier `.env` à partir du fichier d'exemple :
+Créer un fichier `.env` à partir du fichier d'exemple et renseigner la clé d'API `MISTRAL_API_KEY`.
 
 ```bash
 cp .env.example .env
 ```
 
-Puis renseigner les variables nécessaires dans le fichier `.env`.
-
-Variables principales :
-
-| Variable | Rôle | Obligatoire |
-|---|---|---|
-| `MISTRAL_API_KEY` | Clé utilisée pour appeler le modèle Mistral | Oui, pour générer des réponses |
-| `MISTRAL_MODEL` | Nom du modèle Mistral utilisé | Non |
-| `OPENAGENDA_BASE_URL` | URL de base de l'API Opendatasoft / OpenAgenda | Non |
-| `OPENAGENDA_DATASET_ID` | Identifiant du jeu de données OpenAgenda à interroger | Oui, pour collecter les événements |
-
-L'API Opendatasoft peut être utilisée sans clé API pour les jeux de données publics. Une clé peut être nécessaire uniquement pour accéder à des données restreintes ou bénéficier de quotas plus élevés.
-
-Le fichier `.env` ne doit jamais être versionné.
-
-## Vérification de l'environnement
+### Vérification de l'environnement
 
 Tester que les principales dépendances sont correctement installées :
 
 ```bash
+# Test des dépendances
 poetry run python -c "import pandas, requests, dotenv, pydantic, fastapi, langchain, faiss, mistralai; print('Imports OK')"
-```
 
-Tester le chargement de la configuration :
-
-```bash
+# Test du chargement de la configuration 
 poetry run python -c "from echo_app.config import MISTRAL_MODEL, OPENAGENDA_BASE_URL; print(MISTRAL_MODEL); print(OPENAGENDA_BASE_URL)"
-```
 
-Tester la présence de la clé Mistral après avoir renseigné `.env` :
-
-```bash
+# Test de la présence de la clé Mistral
 poetry run python -c "from echo_app.config import get_mistral_api_key; print('Mistral key OK' if get_mistral_api_key() else 'Missing key')"
 ```
 
-## Qualité du code
+## Commandes utiles
 
-Lancer Ruff :
+### Qualité du code
 
 ```bash
 poetry run ruff check .
-```
-
-Lancer les tests :
-
-```bash
 poetry run pytest
 ```
 
-## Rapport technique
+### Collecter les événements bruts
 
-Le rapport technique du projet sera rédigé dans :
-
-```text
-docs/rapport_technique.md
+```bash
+poetry run python scripts/fetch_openagenda_events.py
 ```
+Les événements collectés sont sauvegardés dans 'data/raw/openagenda_events_raw.json'.
