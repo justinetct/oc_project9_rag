@@ -68,7 +68,18 @@ Créer un fichier `.env` à partir du fichier d'exemple :
 cp .env.example .env
 ```
 
-Puis renseigner les clés API nécessaires dans le fichier `.env`.
+Puis renseigner les variables nécessaires dans le fichier `.env`.
+
+Variables principales :
+
+| Variable | Rôle | Obligatoire |
+|---|---|---|
+| `MISTRAL_API_KEY` | Clé utilisée pour appeler le modèle Mistral | Oui, pour générer des réponses |
+| `MISTRAL_MODEL` | Nom du modèle Mistral utilisé | Non |
+| `OPENAGENDA_BASE_URL` | URL de base de l'API Opendatasoft / OpenAgenda | Non |
+| `OPENAGENDA_DATASET_ID` | Identifiant du jeu de données OpenAgenda à interroger | Oui, pour collecter les événements |
+
+L'API Opendatasoft peut être utilisée sans clé API pour les jeux de données publics. Une clé peut être nécessaire uniquement pour accéder à des données restreintes ou bénéficier de quotas plus élevés.
 
 Le fichier `.env` ne doit jamais être versionné.
 
@@ -80,16 +91,21 @@ Tester que les principales dépendances sont correctement installées :
 poetry run python -c "import pandas, requests, dotenv, pydantic, fastapi, langchain, faiss, mistralai; print('Imports OK')"
 ```
 
+Tester le chargement de la configuration :
+
+```bash
+poetry run python -c "from echo_app.config import MISTRAL_MODEL, OPENAGENDA_BASE_URL; print(MISTRAL_MODEL); print(OPENAGENDA_BASE_URL)"
+```
+
+Tester la présence de la clé Mistral après avoir renseigné `.env` :
+
+```bash
+poetry run python -c "from echo_app.config import get_mistral_api_key; print('Mistral key OK' if get_mistral_api_key() else 'Missing key')"
+```
+
 ## Qualité du code
 
 Lancer Ruff :
 
 ```bash
 poetry run ruff check .
-```
-
-Lancer les tests :
-
-```bash
-poetry run pytest
-```
