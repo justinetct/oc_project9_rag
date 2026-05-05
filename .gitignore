@@ -24,10 +24,20 @@ env/
 .vscode/
 
 # Data / generated files
-data/
 inputs/
 outputs/
-vector_db/
 *.db
 *.sqlite
 *.sqlite3
+
+# Data files
+data/raw/*
+data/processed/*
+data/evaluation/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/evaluation/.gitkeep
+
+# Vector store files
+vector_store/*
+!vector_store/.gitkeep

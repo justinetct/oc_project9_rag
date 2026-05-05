@@ -3,7 +3,6 @@
 
 > Écho est le chatbot culturel développé par Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
-
 ## Objectif
 
 Ce projet a pour objectif de concevoir un système RAG capable de répondre à des questions à partir de données collectées via OpenAgenda.
@@ -13,9 +12,37 @@ L'application s'appuiera notamment sur :
 - Python 3.12
 - Poetry pour la gestion de l'environnement
 - LangChain pour la chaîne RAG
-- Faiss pour l'index vectoriel
+- FAISS pour l'index vectoriel
 - Mistral AI pour le modèle de langage
 - FastAPI pour l'exposition d'une API
+
+## Structure du projet
+
+```text
+oc_project9_rag/
+├── data/                 # Données du projet
+│   ├── raw/              # Données brutes collectées depuis OpenAgenda
+│   ├── processed/        # Données nettoyées ou transformées
+│   └── evaluation/       # Jeux de données utilisés pour évaluer le RAG
+├── docs/                 # Documentation projet et notes de démonstration
+├── notebooks/            # Notebooks d'exploration et d'analyse
+├── scripts/              # Scripts exécutables ponctuels
+├── src/                  # Code commun et fonctions utilitaires
+│   ├── config.py         # Configuration générale du projet
+│   └── utils/io.py       # Fonctions simples d'entrée / sortie
+├── echo_app/             # Application principale Écho
+│   ├── config.py         # Configuration spécifique à l'application
+│   ├── indexing/         # Création et mise à jour de l'index vectoriel
+│   ├── rag/              # Logique RAG : recherche, prompt et génération
+│   └── api/main.py       # Point d'entrée FastAPI
+├── tests/                # Tests automatisés
+├── vector_store/         # Index FAISS généré localement
+├── .env.example          # Exemple de variables d'environnement
+├── pyproject.toml        # Configuration Poetry
+└── README.md
+```
+
+Les dossiers `data/` et `vector_store/` contiennent des fichiers générés ou volumineux qui ne doivent pas être versionnés. Les fichiers `.gitkeep` permettent simplement de conserver l'arborescence vide dans Git.
 
 ## Installation
 
@@ -66,4 +93,3 @@ Lancer les tests :
 ```bash
 poetry run pytest
 ```
-
