@@ -27,7 +27,7 @@ Les données utilisées proviennent d'OpenAgenda, via l'API Opendatasoft.
 
 Elles correspondent à des événements culturels qui seront collectés, nettoyés puis indexés pour alimenter le système RAG.
 
-À ce stade du projet, la collecte des données n'est pas encore implémentée. Le README sera enrichi progressivement avec les commandes de récupération des données et de reconstruction de l'index FAISS.
+À ce stade du projet, l’API OpenAgenda a été explorée et un premier échantillon brut peut être sauvegardé. Le README sera enrichi progressivement avec les commandes de collecte complète des données et de reconstruction de l’index FAISS.
 
 ## Stack technique
 
@@ -52,7 +52,8 @@ oc_project9_rag/
 ├── notebooks/            # Notebooks d'exploration et d'analyse
 ├── scripts/              # Scripts exécutables ponctuels
 ├── src/                  # Code commun et fonctions utilitaires
-│   ├── config.py         # Configuration générale du projet
+│   ├── config.py         # constantes, chemins, variables d'env
+│   ├── openagenda.py     # fonctions liées à l'API OpenAgenda   
 │   └── utils/io.py       # Fonctions simples d'entrée / sortie
 ├── echo_app/             # Application principale Écho
 │   ├── config.py         # Configuration spécifique à l'application
