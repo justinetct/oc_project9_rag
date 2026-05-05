@@ -109,3 +109,10 @@ Lancer Ruff :
 
 ```bash
 poetry run ruff check .
+```
+
+Lancer les tests :
+
+```bash
+poetry run pytest
+```
