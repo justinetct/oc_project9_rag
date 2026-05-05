@@ -20,6 +20,12 @@ L’exploration est réalisée dans le notebook :
 notebooks/01_openagenda_exploration.ipynb
 ```
 
+La collecte brute complète peut être lancée avec :
+
+```bash
+poetry run python scripts/fetch_openagenda_events.py
+```
+
 ## Endpoint testé
 
 Base URL :
