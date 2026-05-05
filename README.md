@@ -3,9 +3,33 @@
 
 > Écho est le chatbot culturel développé par Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
+
+## Sommaire
+
+- [Objectif](#objectif)
+- [Données utilisées](#données-utilisées)
+- [Stack technique](#stack-technique)
+- [Structure du projet](#structure-du-projet)
+- [Installation](#installation)
+- [Variables d'environnement](#variables-denvironnement)
+- [Vérification de l'environnement](#vérification-de-lenvironnement)
+- [Qualité du code](#qualité-du-code)
+- [Rapport technique](#rapport-technique)
+
+
 ## Objectif
 
 Ce projet a pour objectif de concevoir un système RAG capable de répondre à des questions à partir de données collectées via OpenAgenda.
+
+## Données utilisées
+
+Les données utilisées proviennent d'OpenAgenda, via l'API Opendatasoft.
+
+Elles correspondent à des événements culturels qui seront collectés, nettoyés puis indexés pour alimenter le système RAG.
+
+À ce stade du projet, la collecte des données n'est pas encore implémentée. Le README sera enrichi progressivement avec les commandes de récupération des données et de reconstruction de l'index FAISS.
+
+## Stack technique
 
 L'application s'appuiera notamment sur :
 
@@ -115,4 +139,12 @@ Lancer les tests :
 
 ```bash
 poetry run pytest
+```
+
+## Rapport technique
+
+Le rapport technique du projet sera rédigé dans :
+
+```text
+docs/rapport_technique.md
 ```
