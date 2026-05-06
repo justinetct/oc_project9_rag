@@ -53,17 +53,19 @@ Aucune clé API n’est nécessaire pour les premiers appels publics testés.
 
 ## Filtre temporel retenu
 
-L’énoncé demande de cibler des événements récents, c’est-à-dire de moins d’un an.
+Le POC utilise une date de référence figée pour rendre la collecte reproductible.
 
 Le filtrage ne doit pas être fait avec `refine`, qui sert surtout aux facettes. Le filtre retenu utilise donc `where` :
 
 ```text
-firstdate_begin >= now(years=-1)
+lastdate_end >= date'2026-05-01'
 ```
 
-Ce filtre conserve les événements dont la première date est située dans les 12 derniers mois.
+Ce filtre conserve les événements encore actifs ou à venir à partir du 1er mai 2026.
 
-Pour un assistant de recommandation d’événements, ce choix reste pertinent car il permet de conserver des événements récents ou à venir, tout en évitant les événements trop anciens.
+Il évite d’indexer des événements déjà terminés et rend le dataset reproductible pour le POC, les tests et la soutenance.
+
+En production, cette date figée pourrait être remplacée par une date dynamique.
 
 ## Filtre géographique
 
@@ -112,13 +114,13 @@ location_department = "Gironde"
 AND location_region = "Nouvelle-Aquitaine"
 AND location_countrycode IN ("FR", "fr")
 AND location_city IN ("Arcachon", "La Teste-de-Buch", "Pyla-sur-Mer", "Gujan-Mestras", "Le Teich", "Biganos", "Audenge", "Lanton", "Andernos-les-Bains", "Arès", "Lège-Cap-Ferret", "Mios", "Marcheprime", "Salles", "Belin-Béliet", "Le Barp", "Lugos", "Saint-Magne")
-AND firstdate_begin >= now(years=-1)
+AND lastdate_end >= date'2026-05-01'
 ```
 
 Avec ces filtres, le notebook retourne actuellement :
 
 ```text
-Nombre total d'événements trouvés : 603
+Nombre total d'événements trouvés : 138
 ```
 
 ## Configuration centralisée
@@ -238,7 +240,7 @@ Les champs suivants sont utiles comme métadonnées de contrôle, mais ils ne se
 - Utiliser l’endpoint `/records` du dataset `evenements-publics-openagenda`.
 - Ne pas utiliser de clé API pour le POC.
 - Utiliser `where` plutôt que `refine` pour les filtres métier.
-- Filtrer les événements récents avec `firstdate_begin >= now(years=-1)`.
+- Filtrer les événements encore actifs ou à venir avec `lastdate_end >= date'2026-05-01'`.
 - Conserver une zone géographique limitée au Bassin d’Arcachon, au Val de l’Eyre et aux communes proches.
 - Conserver les codes pays `FR` et `fr`.
 - Trier les événements par date croissante avec `order_by=firstdate_begin asc`.
