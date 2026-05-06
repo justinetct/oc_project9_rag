@@ -53,7 +53,8 @@ OPENAGENDA_CITIES = [
 OPENAGENDA_DEPARTMENT = "Gironde"
 OPENAGENDA_REGION = "Nouvelle-Aquitaine"
 OPENAGENDA_COUNTRY_CODES = ["FR", "fr"]
-OPENAGENDA_DATE_FILTER = "firstdate_begin >= now(years=-1)"
+OPENAGENDA_REFERENCE_DATE = "2026-05-01"
+OPENAGENDA_DATE_FILTER = f"lastdate_end >= date'{OPENAGENDA_REFERENCE_DATE}'"
 OPENAGENDA_ORDER_BY = "firstdate_begin asc"
 OPENAGENDA_PAGE_SIZE = 100
 
@@ -120,6 +121,7 @@ RAG_USEFUL_FIELDS = [
 
 RAW_OPENAGENDA_SAMPLE_FILENAME = "sample_openagenda.json"
 RAW_OPENAGENDA_EVENTS_FILENAME = "openagenda_events_raw.json"
+PROCESSED_EVENTS_FILTERED_FILENAME = "events_filtered.json"
 PROCESSED_OPENAGENDA_FILENAME = "openagenda_events_processed.csv"
 
 

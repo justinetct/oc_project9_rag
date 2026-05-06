@@ -112,4 +112,6 @@ poetry run pytest
 ```bash
 poetry run python scripts/fetch_openagenda_events.py
 ```
-Les événements collectés sont sauvegardés dans 'data/raw/openagenda_events_raw.json'.
+La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible.
+
+Les événements collectés sont sauvegardés dans `data/raw/openagenda_events_raw.json`.
