@@ -7,7 +7,7 @@
 
 Concevoir un système RAG capable de répondre à des questions à partir d’événements collectés via OpenAgenda.
 
-Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis nettoyées, indexées avec FAISS et utilisées par le chatbot Écho pour générer des réponses contextualisées.
+Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents seront ensuite découpés, indexés avec FAISS et utilisés par le chatbot Écho pour générer des réponses contextualisées.
 
 ## Sommaire
 
@@ -28,11 +28,9 @@ L'application s'appuiera notamment sur :
 - Mistral AI pour le modèle de langage
 - FastAPI pour l'exposition d'une API
 
-Le rapport technique du projet sera rédigé dans :
+Le **rapport technique** du projet sera rédigé dans [`docs/rapport_technique.md`](docs/rapport_technique.md).
 
-```text
-docs/rapport_technique.md
-```
+La documentation du pipeline OpenAgenda, du pré-processing et de la construction des documents textuels est détaillée dans [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md).
 
 ## Structure du projet
 
@@ -55,9 +53,11 @@ oc_project9_rag/
 ├── scripts/                           # Scripts exécutables ponctuels
 │   ├── 01_fetch_openagenda_events.py  # Récupération des événements OpenAgenda bruts
 │   ├── 02_filter_openagenda_events.py # Filtrage temporel des événements
-│   └── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
+│   ├── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
+│   └── 04_build_event_documents.py    # Création des documents textuels pour le RAG
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── config.py                      # Constantes, chemins et paramètres de collecte
+│   ├── documents.py                   # Construction des documents textuels indexables
 │   ├── openagenda.py                  # Client simple pour l'API OpenAgenda
 │   ├── preprocessing.py               # Filtrage, nettoyage et normalisation des événements
 │   └── utils/io.py                    # Fonctions simples d'entrée / sortie
@@ -112,7 +112,7 @@ poetry run pytest
 
 ### Pipeline OpenAgenda
 
-La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible.
+La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible. Le pipeline transforme ensuite les événements bruts en événements nettoyés, puis en documents Markdown prêts pour le futur chunking et l’indexation FAISS.
 
 ```bash
 # 1. Collecter les événements bruts
@@ -123,6 +123,9 @@ poetry run python scripts/02_filter_openagenda_events.py
 
 # 3. Nettoyer et normaliser les événements
 poetry run python scripts/03_clean_openagenda_events.py
+
+# 4. Construire les documents textuels pour le RAG
+poetry run python scripts/04_build_event_documents.py
 ```
 
 Fichiers générés localement :
@@ -131,4 +134,10 @@ Fichiers générés localement :
 data/raw/openagenda_events_raw.json
 data/processed/events_filtered.json
 data/processed/events_clean.json
+data/processed/events_documents.jsonl
 ```
+
+Le fichier `events_documents.jsonl` contient un document par ligne, avec :
+
+- `document_text` : texte Markdown lisible et indexable ;
+- `metadata` : informations structurées conservées séparément, comme l’URL source, la ville, les dates, l’image et les coordonnées.
