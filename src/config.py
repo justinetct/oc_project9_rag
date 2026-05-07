@@ -122,6 +122,7 @@ RAG_USEFUL_FIELDS = [
 RAW_OPENAGENDA_SAMPLE_FILENAME = "sample_openagenda.json"
 RAW_OPENAGENDA_EVENTS_FILENAME = "openagenda_events_raw.json"
 PROCESSED_EVENTS_FILTERED_FILENAME = "events_filtered.json"
+PROCESSED_EVENTS_CLEAN_FILENAME = "events_clean.json"
 PROCESSED_OPENAGENDA_FILENAME = "openagenda_events_processed.csv"
 
 

@@ -38,28 +38,31 @@ docs/rapport_technique.md
 
 ```text
 oc_project9_rag/
-├── data/                 # Données du projet
-│   ├── raw/              # Données brutes collectées depuis OpenAgenda
-│   ├── processed/        # Données nettoyées ou transformées
-│   └── evaluation/       # Jeux de données utilisés pour évaluer le RAG
-├── docs/                 # Documentation projet et notes de démonstration
-├── notebooks/            # Notebooks d'exploration et d'analyse
-├── scripts/              # Scripts exécutables ponctuels
-│   └── fetch_openagenda_events.py  # Récupération des événements OpenAgenda bruts
-├── src/                  # Code commun et fonctions utilitaires
-│   ├── config.py         # Constantes, chemins et paramètres de collecte
-│   ├── openagenda.py     # Client simple pour l'API OpenAgenda
-│   └── utils/io.py       # Fonctions simples d'entrée / sortie
-├── echo_app/             # Application principale Écho
-│   ├── config.py         # Configuration spécifique à l'application
-│   ├── indexing/         # Création et mise à jour de l'index vectoriel
-│   ├── rag/              # Logique RAG : recherche, prompt et génération
-│   └── api/main.py       # Point d'entrée FastAPI
-├── tests/                # Tests automatisés
-├── vector_store/         # Index FAISS généré localement
-├── .env.example          # Exemple de variables d'environnement
-├── pyproject.toml        # Configuration Poetry
-└── README.md
+├── .env.example                       # Exemple de variables d'environnement
+├── data/                              # Données du projet
+│   ├── evaluation/                    # Jeux de données utilisés pour évaluer le RAG
+│   ├── processed/                     # Données nettoyées ou transformées
+│   └── raw/                           # Données brutes collectées depuis OpenAgenda
+├── docs/                              # Documentation projet et notes de démonstration
+├── echo_app/                          # Application principale Écho
+│   ├── api/main.py                    # Point d'entrée FastAPI
+│   ├── config.py                      # Configuration spécifique à l'application
+│   ├── indexing/                      # Création et mise à jour de l'index vectoriel
+│   └── rag/                           # Logique RAG : recherche, prompt et génération
+├── notebooks/                         # Notebooks d'exploration et d'analyse
+├── pyproject.toml                     # Configuration Poetry
+├── README.md
+├── scripts/                           # Scripts exécutables ponctuels
+│   ├── 01_fetch_openagenda_events.py  # Récupération des événements OpenAgenda bruts
+│   ├── 02_filter_openagenda_events.py # Filtrage temporel des événements
+│   └── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
+├── src/                               # Code commun et fonctions utilitaires
+│   ├── config.py                      # Constantes, chemins et paramètres de collecte
+│   ├── openagenda.py                  # Client simple pour l'API OpenAgenda
+│   ├── preprocessing.py               # Filtrage, nettoyage et normalisation des événements
+│   └── utils/io.py                    # Fonctions simples d'entrée / sortie
+├── tests/                             # Tests automatisés
+└── vector_store/                      # Index FAISS généré localement
 ```
 
 Les dossiers `data/` et `vector_store/` contiennent des fichiers générés ou volumineux qui ne doivent pas être versionnés. Les fichiers `.gitkeep` permettent simplement de conserver l'arborescence vide dans Git.
@@ -107,11 +110,25 @@ poetry run ruff check .
 poetry run pytest
 ```
 
-### Collecter les événements bruts
+### Pipeline OpenAgenda
 
-```bash
-poetry run python scripts/fetch_openagenda_events.py
-```
 La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible.
 
-Les événements collectés sont sauvegardés dans `data/raw/openagenda_events_raw.json`.
+```bash
+# 1. Collecter les événements bruts
+poetry run python scripts/01_fetch_openagenda_events.py
+
+# 2. Filtrer les événements avec la date de référence du POC
+poetry run python scripts/02_filter_openagenda_events.py
+
+# 3. Nettoyer et normaliser les événements
+poetry run python scripts/03_clean_openagenda_events.py
+```
+
+Fichiers générés localement :
+
+```text
+data/raw/openagenda_events_raw.json
+data/processed/events_filtered.json
+data/processed/events_clean.json
+```

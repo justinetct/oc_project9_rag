@@ -29,7 +29,7 @@ def main() -> None:
     if not input_path.exists():
         print(
             "Fichier brut introuvable. Lancez d'abord : "
-            "poetry run python scripts/fetch_openagenda_events.py"
+            "poetry run python scripts/01_fetch_openagenda_events.py"
         )
         raise SystemExit(1)
 
