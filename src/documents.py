@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 
 from src.preprocessing import normalize_text, parse_event_datetime
 
@@ -33,7 +34,9 @@ def add_text_part(parts: list[str], label: str, value: str | None) -> None:
 def build_event_document_text(event: dict) -> str:
     """Construit un texte Markdown lisible à partir d'un événement nettoyé."""
     title = normalize_text(event.get("title")) or "Titre non disponible"
-    description = normalize_text(event.get("description"))
+    description = str(event.get("description") or "").replace("\r\n", "\n").strip()
+    description = re.sub(r"[ \t]+\n", "\n", description)
+    description = re.sub(r"\n{3,}", "\n\n", description)
 
     lines = [f"# {title}"]
 
