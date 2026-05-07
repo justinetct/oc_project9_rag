@@ -20,7 +20,7 @@ def make_clean_event(**overrides: object) -> dict:
     event = {
         "event_id": "evt-1",
         "title": "Concert de printemps",
-        "description": "Un concert en plein air.",
+        "description": "Un concert en plein air.\n\n- Point 1\n- Point 2",
         "conditions": "Gratuit sur inscription",
         "city": "Arcachon",
         "location_name": "Parc Mauresque",
@@ -50,6 +50,7 @@ def test_build_event_document_text_contains_main_fields() -> None:
     assert "## Description" in document_text
     assert "## Informations pratiques" in document_text
     assert "## Source" in document_text
+    assert "Un concert en plein air.\n\n- Point 1\n- Point 2" in document_text
     assert "- Dates : du 2026-05-10 18:00 au 2026-05-10 20:00" in document_text
     assert "- Lieu : Parc Mauresque" in document_text
     assert "- Ville : Arcachon" in document_text

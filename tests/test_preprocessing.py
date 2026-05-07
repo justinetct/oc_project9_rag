@@ -1,3 +1,5 @@
+"""Tests unitaires pour le filtrage et le nettoyage des événements OpenAgenda."""
+
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -11,14 +13,65 @@ from src.preprocessing import (
     extract_coordinates,
     filter_events_by_date,
     format_keywords,
+    html_to_markdown_text,
 )
 
 
-def test_clean_html_removes_tags():
+def test_clean_html_removes_tags() -> None:
+    """Vérifie que les balises HTML sont supprimées du texte."""
     assert clean_html("<p>Hello <strong>world</strong></p>") == "Hello world"
 
 
-def test_build_clean_description_avoids_duplicate_short_description():
+def test_html_to_markdown_text_preserves_paragraphs() -> None:
+    """Vérifie que deux paragraphes restent séparés."""
+    text = "<p>Premier paragraphe.</p><p>Deuxième paragraphe.</p>"
+
+    result = html_to_markdown_text(text)
+
+    assert result == "Premier paragraphe.\n\nDeuxième paragraphe."
+
+
+def test_html_to_markdown_text_converts_list_items() -> None:
+    """Vérifie que les listes HTML deviennent des puces Markdown."""
+    text = "<ul><li>Premier</li><li>Deuxième</li></ul>"
+
+    result = html_to_markdown_text(text)
+
+    assert result == "- Premier\n- Deuxième"
+
+
+def test_html_to_markdown_text_removes_links_but_keeps_text() -> None:
+    """Vérifie que le texte d'un lien est conservé sans son URL."""
+    text = (
+        '<p>Réservation sur '
+        '<a href="https://example.com">EcoNature</a> '
+        '<a href="https://example.com">https://example.com</a></p>'
+    )
+
+    result = html_to_markdown_text(text)
+
+    assert "EcoNature" in result
+    assert "https://example.com" not in result
+
+
+def test_html_to_markdown_text_removes_repeated_raw_link() -> None:
+    """Vérifie qu'un libellé suivi d'une URL brute est simplifié proprement."""
+    html_text = (
+        '<p>Infos et réservation sur '
+        '<a href="https://www.eco-nature.org/experience/demo">EcoNature : </a>'
+        '<a href="https://www.eco-nature.org/experience/demo">'
+        'https://www.eco-nature.org/experience/demo</a></p>'
+    )
+
+    result = html_to_markdown_text(html_text)
+
+    assert "Infos et réservation sur EcoNature" in result
+    assert "EcoNature :" not in result
+    assert "https://www.eco-nature.org" not in result
+
+
+def test_build_clean_description_avoids_duplicate_short_description() -> None:
+    """Vérifie que la description courte n'est pas dupliquée."""
     event = {
         "description_fr": "Résumé court",
         "longdescription_fr": "<p>Résumé court avec plus de détails.</p>",
@@ -31,33 +84,37 @@ def test_build_clean_description_avoids_duplicate_short_description():
     assert description.count("Résumé court") == 1
 
 
-def test_build_clean_description_concatenates_when_descriptions_are_different():
+def test_build_clean_description_concatenates_when_descriptions_are_different() -> None:
+    """Vérifie que les descriptions différentes sont concaténées."""
     event = {
         "description_fr": "Résumé court",
-        "longdescription_fr": "<p>Description longue différente.</p>",
+        "longdescription_fr": "<p>Description longue différente.</p><ul><li>Point 1</li></ul>",
         "conditions_fr": "Gratuit",
     }
 
     description = build_clean_description(event)
 
-    assert "Résumé court" in description
-    assert "Description longue différente" in description
-    assert "Conditions : Gratuit" in description
+    assert description.startswith("Résumé court\n\nDescription longue différente.")
+    assert "- Point 1" in description
+    assert "\n\nConditions : Gratuit" in description
 
 
-def test_format_keywords_removes_technical_challenge_ids():
+def test_format_keywords_removes_technical_challenge_ids() -> None:
+    """Vérifie que les mots-clés techniques sont supprimés."""
     keywords = ["Nature", "challenge-id=123", "Astronomie"]
 
     assert format_keywords(keywords) == "Nature, Astronomie"
 
 
-def test_extract_coordinates_from_dict():
+def test_extract_coordinates_from_dict() -> None:
+    """Vérifie l'extraction latitude / longitude depuis OpenAgenda."""
     event = {"location_coordinates": {"lat": 44.1, "lon": -1.2}}
 
     assert extract_coordinates(event) == (44.1, -1.2)
 
 
-def test_filter_events_by_date_keeps_current_events():
+def test_filter_events_by_date_keeps_current_events() -> None:
+    """Vérifie que le filtrage conserve seulement les événements actifs."""
     reference_datetime = datetime(2026, 5, 1, tzinfo=timezone.utc)
     events = [
         {"uid": "1", "lastdate_end": "2026-05-10T10:00:00+00:00"},
@@ -70,7 +127,8 @@ def test_filter_events_by_date_keeps_current_events():
     assert filtered_events[0]["uid"] == "1"
 
 
-def test_clean_event_returns_expected_fields():
+def test_clean_event_returns_expected_fields() -> None:
+    """Vérifie que le nettoyage retourne les champs attendus."""
     raw_event = {
         "uid": 123,
         "title_fr": "Observation du ciel",

@@ -1,4 +1,4 @@
-"""Fonctions simples de filtrage temporel des événements OpenAgenda."""
+"""Fonctions simples de filtrage et de nettoyage des événements OpenAgenda."""
 
 from __future__ import annotations
 
@@ -96,6 +96,94 @@ def clean_html(text: str | None) -> str:
     return cleaned_text.strip()
 
 
+def html_to_markdown_text(text: str | None) -> str:
+    """Convertit le HTML utile en Markdown simple."""
+    if text is None:
+        return ""
+
+    markdown_text = html.unescape(str(text)).strip()
+    if not markdown_text:
+        return ""
+
+    markdown_text = markdown_text.replace("\r\n", "\n").replace("\r", "\n")
+    markdown_text = re.sub(
+        r'<a\b[^>]*>\s*([^<]*?)\s*:\s*</a>\s*<a\b[^>]*>\s*https?://[^<]+\s*</a>',
+        lambda match: normalize_text(match.group(1)),
+        markdown_text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+    def replace_anchor(match: re.Match[str]) -> str:
+        anchor_text = normalize_text(re.sub(r"<[^>]+>", "", match.group(1)))
+        if re.fullmatch(r"https?://\S+", anchor_text):
+            return ""
+        return anchor_text
+
+    markdown_text = re.sub(
+        r"<a\b[^>]*>(.*?)</a>",
+        replace_anchor,
+        markdown_text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+    replacements = [
+        (r"<br\s*/?>", "\n"),
+        (r"</p\s*>", "\n\n"),
+        (r"<p\b[^>]*>", ""),
+        (r"<ul\b[^>]*>", "\n"),
+        (r"</ul\s*>", "\n"),
+        (r"<ol\b[^>]*>", "\n"),
+        (r"</ol\s*>", "\n"),
+        (r"<li\b[^>]*>", "- "),
+        (r"</li\s*>", "\n"),
+        (r"</?(strong|em)\b[^>]*>", ""),
+    ]
+
+    for pattern, replacement in replacements:
+        markdown_text = re.sub(
+            pattern,
+            replacement,
+            markdown_text,
+            flags=re.IGNORECASE,
+        )
+
+    markdown_text = re.sub(r"<[^>]+>", "", markdown_text)
+
+    cleaned_lines: list[str] = []
+    for line in markdown_text.split("\n"):
+        cleaned_line = re.sub(r"[ \t]+", " ", line).strip()
+        cleaned_line = re.sub(r"\s+([,.!?])", r"\1", cleaned_line)
+
+        if cleaned_line.startswith("- "):
+            cleaned_line = "- " + cleaned_line[2:].lstrip()
+
+        cleaned_lines.append(cleaned_line)
+
+    normalized_lines: list[str] = []
+    for line in cleaned_lines:
+        if not line:
+            if not normalized_lines or normalized_lines[-1] == "":
+                continue
+            normalized_lines.append("")
+            continue
+
+        if (
+            line.startswith("- ")
+            and normalized_lines
+            and normalized_lines[-1] == ""
+            and len(normalized_lines) >= 2
+            and normalized_lines[-2].startswith("- ")
+        ):
+            normalized_lines.pop()
+
+        normalized_lines.append(line)
+
+    markdown_text = "\n".join(normalized_lines)
+    markdown_text = re.sub(r"\n{3,}", "\n\n", markdown_text)
+
+    return markdown_text.strip()
+
+
 def normalize_text(text: str | None) -> str:
     """Normalise un texte simple."""
     if text is None:
@@ -168,14 +256,14 @@ def extract_image_url(event: dict) -> str | None:
 
 def build_clean_description(event: dict) -> str:
     """Construit une description nettoyée sans dupliquer les métadonnées."""
-    short_description = clean_html(event.get("description_fr"))
-    long_description = clean_html(event.get("longdescription_fr"))
-    conditions = clean_html(event.get("conditions_fr"))
+    short_description = html_to_markdown_text(event.get("description_fr"))
+    long_description = html_to_markdown_text(event.get("longdescription_fr"))
+    conditions = html_to_markdown_text(event.get("conditions_fr"))
 
     if long_description and short_description in long_description:
         description = long_description
     elif long_description and short_description:
-        description = f"{short_description}. {long_description}"
+        description = f"{short_description}\n\n{long_description}"
     elif long_description:
         description = long_description
     elif short_description:
@@ -184,7 +272,7 @@ def build_clean_description(event: dict) -> str:
         description = "Description non disponible"
 
     if conditions:
-        description = f"{description}. Conditions : {conditions}"
+        description = f"{description}\n\nConditions : {conditions}"
 
     return description
 
@@ -230,7 +318,7 @@ def clean_event(raw_event: dict) -> dict | None:
             "Titre non disponible",
         ),
         "description": build_clean_description(raw_event),
-        "conditions": clean_html(raw_event.get("conditions_fr")) or None,
+        "conditions": html_to_markdown_text(raw_event.get("conditions_fr")) or None,
         "city": normalize_optional_text(
             raw_event.get("location_city"),
             "Ville non disponible",

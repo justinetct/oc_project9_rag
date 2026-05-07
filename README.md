@@ -16,6 +16,8 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
 - [Structure du projet](#structure-du-projet)
 - [Installation](#installation)
 - [Commandes utiles](#commandes-utiles)
+  - [Qualité du code](#qualité-du-code)
+  - [Pipeline OpenAgenda](#pipeline-openagenda)
 
 ## Stack technique
 
@@ -121,7 +123,7 @@ poetry run python scripts/01_fetch_openagenda_events.py
 # 2. Filtrer les événements avec la date de référence du POC
 poetry run python scripts/02_filter_openagenda_events.py
 
-# 3. Nettoyer et normaliser les événements
+# 3. Nettoyer, normaliser et convertir le HTML utile en Markdown
 poetry run python scripts/03_clean_openagenda_events.py
 
 # 4. Construire les documents textuels pour le RAG
