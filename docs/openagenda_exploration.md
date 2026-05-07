@@ -23,7 +23,7 @@ notebooks/01_openagenda_exploration.ipynb
 La collecte brute complète peut être lancée avec :
 
 ```bash
-poetry run python scripts/fetch_openagenda_events.py
+poetry run python scripts/01_fetch_openagenda_events.py
 ```
 
 ## Endpoint testé
