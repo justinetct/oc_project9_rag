@@ -372,8 +372,10 @@ Après la génération des embeddings, ils sont stockés dans un index FAISS loc
 - Le fichier `vector_store/metadata.json` contient le mapping entre chaque position FAISS et les informations du chunk : `chunk_id`, `event_id`, `chunk_index`, `chunk_count`, `chunk_text` et `metadata`.
 - Les métadonnées sont sauvegardées séparément, car FAISS ne stocke pas directement le texte source ni les informations utiles pour l'affichage.
 
-Un script permet de reconstruire le vector store local :
+La commande principale recommandée pour reconstruire le vector store local est :
 
 ```bash
-poetry run python scripts/06_build_vector_store.py
+poetry run python scripts/rebuild_index.py
 ```
+
+Cette commande reconstruit le vector store complet à partir des documents préparés : elle charge `data/processed/events_documents.jsonl`, applique le chunking, génère les embeddings Mistral, construit l'index FAISS et sauvegarde l'index et les métadonnées dans `vector_store/`.

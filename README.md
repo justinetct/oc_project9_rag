@@ -68,7 +68,7 @@ oc_project9_rag/
 │   ├── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
 │   ├── 04_build_event_documents.py    # Création des documents textuels pour le RAG
 │   ├── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
-│   └── 06_build_vector_store.py       # Construction locale de l'index FAISS
+│   └── rebuild_index.py               # Commande principale de reconstruction du vector store FAISS
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
 │   ├── config.py                      # Constantes, chemins et paramètres de collecte
@@ -173,16 +173,9 @@ Les documents Markdown générés à partir des événements OpenAgenda sont pr�
 Le notebook `notebooks/03_faiss_indexing.ipynb` compare plusieurs approches : sans chunking, chunking par taille, chunking Markdown et chunking spaCy par phrases.
 
 > **Modèle spaCy optionnel** :
->
-> Le notebook compare aussi une stratégie exploratoire de chunking par phrases avec spaCy.
-> Pour reproduire cette partie du notebook, installer le modèle français :
->
-> ```bash
-> poetry run python -m spacy download fr_core_news_sm
-> ```
->
 > Cette exploration a été réalisée ponctuellement dans le notebook avec spaCy et le modèle `fr_core_news_sm`.
 > spaCy n’est pas requis pour exécuter le pipeline principal de chunking, qui utilise `src/chunking.py`.
+> La dépendance n'est donc pas installée par défaut dans le projet.
 
 
 La documentation détaillée est disponible dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
@@ -203,5 +196,5 @@ poetry run python scripts/05_test_mistral_embeddings.py
 L'index FAISS local et le mapping de métadonnées peuvent ensuite être reconstruits avec :
 
 ```bash
-poetry run python scripts/06_build_vector_store.py
+poetry run python scripts/rebuild_index.py
 ```
