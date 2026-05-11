@@ -53,7 +53,8 @@ oc_project9_rag/
 │   ├── api/main.py                    # Point d'entrée FastAPI
 │   ├── config.py                      # Configuration spécifique à l'application
 │   ├── indexing/                      # Création et mise à jour de l'index vectoriel
-│   │   └── embeddings.py              # Génération des embeddings Mistral
+│   │   ├── embeddings.py              # Génération des embeddings Mistral
+│   │   └── faiss_store.py             # Construction et sauvegarde du vector store FAISS
 │   └── rag/                           # Logique RAG : recherche, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
 │   ├── 01_openagenda_exploration.ipynb
@@ -66,7 +67,8 @@ oc_project9_rag/
 │   ├── 02_filter_openagenda_events.py # Filtrage temporel des événements
 │   ├── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
 │   ├── 04_build_event_documents.py    # Création des documents textuels pour le RAG
-│   └── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
+│   ├── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
+│   └── 06_build_vector_store.py       # Construction locale de l'index FAISS
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
 │   ├── config.py                      # Constantes, chemins et paramètres de collecte
@@ -196,4 +198,10 @@ Chaque chunk peut ensuite être transformé en vecteur avec le modèle d'embeddi
 
 ```bash
 poetry run python scripts/05_test_mistral_embeddings.py
+```
+
+L'index FAISS local et le mapping de métadonnées peuvent ensuite être reconstruits avec :
+
+```bash
+poetry run python scripts/06_build_vector_store.py
 ```
