@@ -54,7 +54,8 @@ oc_project9_rag/
 │   ├── config.py                      # Configuration spécifique à l'application
 │   ├── indexing/                      # Création et mise à jour de l'index vectoriel
 │   │   ├── embeddings.py              # Génération des embeddings Mistral
-│   │   └── faiss_store.py             # Construction et sauvegarde du vector store FAISS
+│   │   ├── faiss_store.py             # Construction et sauvegarde du vector store FAISS
+│   │   └── search.py                  # Recherche sémantique sur l'index FAISS
 │   └── rag/                           # Logique RAG : recherche, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
 │   ├── 01_openagenda_exploration.ipynb
@@ -68,6 +69,7 @@ oc_project9_rag/
 │   ├── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
 │   ├── 04_build_event_documents.py    # Création des documents textuels pour le RAG
 │   ├── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
+│   ├── 06_test_semantic_search.py     # Test manuel de la recherche sémantique
 │   └── rebuild_index.py               # Commande principale de reconstruction du vector store FAISS
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
@@ -197,4 +199,10 @@ L'index FAISS local et le mapping de métadonnées peuvent ensuite être reconst
 
 ```bash
 poetry run python scripts/rebuild_index.py
+```
+
+Une fois l'index reconstruit, un script permet de tester la recherche sémantique sur quelques requêtes prédéfinies :
+
+```bash
+poetry run python scripts/06_test_semantic_search.py
 ```

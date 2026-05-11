@@ -8,6 +8,7 @@ from echo_app.indexing.faiss_store import (
     save_vector_store,
     search_index,
 )
+from echo_app.indexing.search import search_similar_events
 
 __all__ = [
     "embed_query",
@@ -18,4 +19,5 @@ __all__ = [
     "load_vector_store",
     "save_vector_store",
     "search_index",
+    "search_similar_events",
 ]

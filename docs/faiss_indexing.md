@@ -379,3 +379,22 @@ poetry run python scripts/rebuild_index.py
 ```
 
 Cette commande reconstruit le vector store complet à partir des documents préparés : elle charge `data/processed/events_documents.jsonl`, applique le chunking, génère les embeddings Mistral, construit l'index FAISS et sauvegarde l'index et les métadonnées dans `vector_store/`.
+
+## Recherche sémantique
+
+Une fois l'index FAISS construit, la recherche sémantique permet de retrouver les chunks les plus proches d'une requête utilisateur. Le code est centralisé dans `echo_app/indexing/search.py` et exposé via la fonction `search_similar_events(query, top_k=5)`.
+
+Le principe reste simple :
+
+1. la requête utilisateur est transformée en embedding avec le modèle `mistral-embed` ;
+2. FAISS cherche les chunks les plus proches de ce vecteur dans `vector_store/index.faiss` ;
+3. les métadonnées de `vector_store/metadata.json` permettent de retrouver le titre, la ville, les dates et l'URL associés à chaque chunk ;
+4. chaque résultat contient `text`, `score`, `metadata`, `chunk_id`, `event_id`, `faiss_id` et `distance`. Le `score` est pour l'instant directement égal à la distance FAISS.
+
+Une commande de test manuel permet d'exécuter quelques requêtes prédéfinies et d'afficher les résultats lisiblement :
+
+```bash
+poetry run python scripts/06_test_semantic_search.py
+```
+
+Les tests unitaires de la recherche mockent `load_vector_store`, `embed_query` et `search_index` : ils ne font donc aucun appel à Mistral.
