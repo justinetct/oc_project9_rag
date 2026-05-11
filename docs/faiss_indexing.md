@@ -361,3 +361,19 @@ poetry run python scripts/05_test_mistral_embeddings.py
 ```
 
 Les tests unitaires des embeddings mockent l'API Mistral et ne font pas d'appel réseau.
+
+## Index FAISS
+
+Après la génération des embeddings, ils sont stockés dans un index FAISS local pour permettre une recherche vectorielle rapide.
+
+- FAISS est utilisé pour retrouver les chunks les plus proches d'une requête transformée en embedding.
+- Le choix retenu est `IndexFlatL2`, une structure simple qui compare directement les vecteurs avec une distance euclidienne.
+- Le fichier `vector_store/index.faiss` contient uniquement les vecteurs indexés.
+- Le fichier `vector_store/metadata.json` contient le mapping entre chaque position FAISS et les informations du chunk : `chunk_id`, `event_id`, `chunk_index`, `chunk_count`, `chunk_text` et `metadata`.
+- Les métadonnées sont sauvegardées séparément, car FAISS ne stocke pas directement le texte source ni les informations utiles pour l'affichage.
+
+Un script permet de reconstruire le vector store local :
+
+```bash
+poetry run python scripts/06_build_vector_store.py
+```
