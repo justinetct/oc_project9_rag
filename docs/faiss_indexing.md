@@ -288,22 +288,13 @@ Limite : le résultat reste proche du chunking par taille sur ce corpus, tout en
 
 La stratégie retenue pour le code principal reste volontairement simple :
 
-- si `document_text` est court, on conserve un seul chunk ;
-- si `document_text` est long, on le découpe en morceaux de taille fixe ;
-- un léger overlap est conservé entre deux morceaux pour limiter les coupures trop brutales ;
+- les événements courts restent en un seul chunk ;
+- les événements longs sont découpés par taille avec un léger overlap ;
 - les chunks trop petits sont évités ;
-- si un document est découpé, le titre est rappelé dans chaque chunk lorsque c'est possible ;
+- le titre est rappelé dans chaque chunk lorsque c'est possible ;
 - les métadonnées de l'événement sont recopiées dans chaque chunk.
 
-Ce choix reste le plus simple à expliquer en soutenance :
-
-- la majorité des documents OpenAgenda sont courts ;
-- un chunking systématique n'est donc pas nécessaire ;
-- le Markdown est une piste pertinente car les documents sont structurés, mais cette approche demanderait des règles supplémentaires pour gérer les très longues sections ;
-- spaCy a bien été testé et apporte un découpage par phrases plus naturel, mais le gain observé reste proche du chunking par taille sur ce corpus ;
-- spaCy ajoute en plus une dépendance plus lourde, ce qui le rend moins intéressant pour un POC simple et défendable.
-
-On garde donc une stratégie robuste, lisible et suffisante pour la première version de l'indexation.
+Cette stratégie limite le nombre de chunks tout en gardant assez de contexte pour la recherche vectorielle.
 
 Le modèle `fr_core_news_sm` est utilisé uniquement pour reproduire l'exploration spaCy du notebook. Pour le réinstaller dans un nouvel environnement, il faut exécuter :
 
@@ -354,3 +345,19 @@ Champs principaux :
 - `chunk_count` : nombre total de chunks pour cet événement ;
 - `chunk_text` : texte qui sera utilisé plus tard pour les embeddings ;
 - `metadata` : copie des métadonnées utiles pour l'affichage et le traçage.
+
+## Embeddings Mistral
+
+Après le chunking, chaque chunk est transformé en vecteur avec le modèle `mistral-embed`.
+
+- modèle utilisé : `mistral-embed`
+- dimension attendue : `1024`
+- rôle : produire les vecteurs qui seront ensuite stockés dans l'index FAISS
+
+Un script manuel permet de vérifier rapidement l'appel au modèle :
+
+```bash
+poetry run python scripts/05_test_mistral_embeddings.py
+```
+
+Les tests unitaires des embeddings mockent l'API Mistral et ne font pas d'appel réseau.

@@ -7,7 +7,7 @@
 
 Concevoir un système RAG capable de répondre à des questions à partir d’événements collectés via OpenAgenda.
 
-Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents seront ensuite découpés, indexés avec FAISS et utilisés par le chatbot Écho pour générer des réponses contextualisées.
+Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents sont ensuite découpés, transformés en embeddings, indexés avec FAISS et utilisés par le chatbot Écho pour générer des réponses contextualisées.
 
 ## Sommaire
 
@@ -27,14 +27,14 @@ L'application s'appuiera notamment sur :
 - Poetry pour la gestion de l'environnement
 - LangChain pour la chaîne RAG
 - FAISS pour l'index vectoriel
-- Mistral AI pour le modèle de langage
+- Mistral AI pour les embeddings et le modèle de langage
 - FastAPI pour l'exposition d'une API
 
 Le **rapport technique** du projet sera rédigé dans [`docs/rapport_technique.md`](docs/rapport_technique.md).
 
 La documentation du pipeline OpenAgenda, du pré-processing et de la construction des documents textuels est détaillée dans [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md).
 
-La stratégie de chunking retenue avant les embeddings et l'indexation FAISS est présentée dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
+La stratégie de chunking, la préparation des embeddings et l'indexation FAISS sont présentées dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
 
 ## Structure du projet
 
@@ -45,7 +45,7 @@ oc_project9_rag/
 │   ├── evaluation/                    # Jeux de données utilisés pour évaluer le RAG
 │   ├── processed/                     # Données nettoyées ou transformées
 │   └── raw/                           # Données brutes collectées depuis OpenAgenda
-├── docs/                              # Documentation projet et notes de démonstration
+├── docs/                              # Documentation du projet
 │   ├── faiss_indexing.md              # Documentation du chunking et de la préparation FAISS
 │   ├── openagenda_exploration.md      # Notes d'exploration OpenAgenda
 │   └── openagenda_preprocessing.md    # Documentation du pré-processing OpenAgenda
@@ -53,6 +53,7 @@ oc_project9_rag/
 │   ├── api/main.py                    # Point d'entrée FastAPI
 │   ├── config.py                      # Configuration spécifique à l'application
 │   ├── indexing/                      # Création et mise à jour de l'index vectoriel
+│   │   └── embeddings.py              # Génération des embeddings Mistral
 │   └── rag/                           # Logique RAG : recherche, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
 │   ├── 01_openagenda_exploration.ipynb
@@ -64,7 +65,8 @@ oc_project9_rag/
 │   ├── 01_fetch_openagenda_events.py  # Récupération des événements OpenAgenda bruts
 │   ├── 02_filter_openagenda_events.py # Filtrage temporel des événements
 │   ├── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
-│   └── 04_build_event_documents.py    # Création des documents textuels pour le RAG
+│   ├── 04_build_event_documents.py    # Création des documents textuels pour le RAG
+│   └── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
 │   ├── config.py                      # Constantes, chemins et paramètres de collecte
@@ -80,7 +82,8 @@ Les dossiers `data/` et `vector_store/` contiennent des fichiers générés ou v
 
 ## Installation
 
-### Poetry  
+### Poetry
+
 Installer les dépendances du projet avec Poetry :
 
 ```bash
@@ -90,20 +93,9 @@ poetry install --no-root
 poetry run python --version
 ```
 
-### Modèle spaCy optionnel
-
-Le notebook `notebooks/03_faiss_indexing.ipynb` compare aussi une stratégie exploratoire de chunking par phrases avec spaCy.
-Pour reproduire cette partie du notebook, installer le modèle français :
-
-```bash
-poetry run python -m spacy download fr_core_news_sm
-```
-
-Cette commande n'est pas nécessaire pour le pipeline principal de chunking, qui utilise `src/chunking.py`.
-
 ### Variables d'environnement
 
-Créer un fichier `.env` à partir du fichier d'exemple et renseigner la clé d'API `MISTRAL_API_KEY`.
+Créer un fichier `.env` à partir du fichier d'exemple et renseigner la clé d'API `MISTRAL_API_KEY`. Le modèle d'embeddings est configuré avec `MISTRAL_EMBEDDING_MODEL`.
 
 ```bash
 cp .env.example .env
@@ -117,8 +109,8 @@ Tester que les principales dépendances sont correctement installées :
 # Test des dépendances
 poetry run python -c "import pandas, requests, dotenv, pydantic, fastapi, langchain, faiss, mistralai; print('Imports OK')"
 
-# Test du chargement de la configuration 
-poetry run python -c "from echo_app.config import MISTRAL_MODEL, OPENAGENDA_BASE_URL; print(MISTRAL_MODEL); print(OPENAGENDA_BASE_URL)"
+# Test du chargement de la configuration
+poetry run python -c "from echo_app.config import MISTRAL_MODEL, OPENAGENDA_BASE_URL; from echo_app.indexing.embeddings import DEFAULT_EMBEDDING_MODEL; print(MISTRAL_MODEL); print(DEFAULT_EMBEDDING_MODEL); print(OPENAGENDA_BASE_URL)"
 
 # Test de la présence de la clé Mistral
 poetry run python -c "from echo_app.config import get_mistral_api_key; print('Mistral key OK' if get_mistral_api_key() else 'Missing key')"
@@ -137,11 +129,12 @@ Les tests couvrent actuellement :
 - les fonctions d’entrée / sortie ;
 - le nettoyage et le pré-processing OpenAgenda ;
 - la construction des documents textuels RAG ;
-- le chunking des documents avant indexation.
+- le chunking des documents avant indexation ;
+- la génération d'embeddings Mistral avec des tests mockés, sans appel réseau.
 
 ## Pipeline OpenAgenda
 
-La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible. Le pipeline transforme ensuite les événements bruts en événements nettoyés, puis en documents Markdown prêts pour le futur chunking et l’indexation FAISS.
+La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible. Le pipeline transforme ensuite les événements bruts en événements nettoyés, puis en documents Markdown prêts pour le chunking et l’indexation FAISS.
 
 ```bash
 # 1. Collecter les événements bruts
@@ -177,16 +170,6 @@ Les documents Markdown générés à partir des événements OpenAgenda sont pr�
 
 Le notebook `notebooks/03_faiss_indexing.ipynb` compare plusieurs approches : sans chunking, chunking par taille, chunking Markdown et chunking spaCy par phrases.
 
-La documentation détaillée est disponible dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
-
-La stratégie de chunking retenue est volontairement simple :
-
-- les événements courts restent en un seul chunk ;
-- les événements longs sont découpés par taille avec un léger overlap ;
-- chaque chunk conserve `event_id`, `chunk_id`, `chunk_index`, `chunk_count` et les métadonnées de l'événement.
-
-
-
 > **Modèle spaCy optionnel** :
 >
 > Le notebook compare aussi une stratégie exploratoire de chunking par phrases avec spaCy.
@@ -198,3 +181,19 @@ La stratégie de chunking retenue est volontairement simple :
 >
 > Cette exploration a été réalisée ponctuellement dans le notebook avec spaCy et le modèle `fr_core_news_sm`.
 > spaCy n’est pas requis pour exécuter le pipeline principal de chunking, qui utilise `src/chunking.py`.
+
+
+La documentation détaillée est disponible dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
+
+La stratégie de chunking retenue est volontairement simple :
+
+- les événements courts restent en un seul chunk ;
+- les événements longs sont découpés par taille avec un léger overlap ;
+- chaque chunk conserve `event_id`, `chunk_id`, `chunk_index`, `chunk_count` et les métadonnées de l'événement.
+
+
+Chaque chunk peut ensuite être transformé en vecteur avec le modèle d'embeddings Mistral. Un test manuel est disponible pour vérifier l'appel à l'API avec la clé locale :
+
+```bash
+poetry run python scripts/05_test_mistral_embeddings.py
+```
