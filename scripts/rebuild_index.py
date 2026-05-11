@@ -1,4 +1,9 @@
-"""Script simple pour construire et sauvegarder l'index FAISS local."""
+"""Commande principale de reconstruction du vector store FAISS local.
+
+Cette commande reconstruit l'index complet à partir des documents OpenAgenda
+préparés : chargement des documents, chunking, génération des embeddings
+Mistral, construction de l'index FAISS et sauvegarde des métadonnées.
+"""
 
 from __future__ import annotations
 
@@ -40,8 +45,8 @@ def load_documents(path: Path) -> list[dict]:
     return documents
 
 
-def main() -> None:
-    """Construit le vector store local à partir des documents chunkés."""
+def rebuild_index() -> None:
+    """Reconstruit le vector store local complet à partir des documents préparés."""
     input_path = PATHS.data_processed / PROCESSED_EVENTS_DOCUMENTS_FILENAME
 
     try:
@@ -77,4 +82,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    rebuild_index()
