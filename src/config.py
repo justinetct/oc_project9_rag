@@ -126,6 +126,10 @@ PROCESSED_EVENTS_CLEAN_FILENAME = "events_clean.json"
 PROCESSED_EVENTS_DOCUMENTS_FILENAME = "events_documents.jsonl"
 PROCESSED_OPENAGENDA_FILENAME = "openagenda_events_processed.csv"
 
+CHUNK_SIZE = 1200
+CHUNK_OVERLAP = 150
+MIN_CHUNK_SIZE = 200
+
 
 @dataclass(frozen=True)
 class Paths:

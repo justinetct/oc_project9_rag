@@ -11,13 +11,13 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
 
 ## Sommaire
 
-- [Objectif](#objectif)
-- [Stack technique](#stack-technique)
-- [Structure du projet](#structure-du-projet)
 - [Installation](#installation)
-- [Commandes utiles](#commandes-utiles)
+  - [Poetry](#poetry)
+  - [Variables d'environnement](#variables-denvironnement)
+  - [Vérification de l'environnement](#vérification-de-lenvironnement)
   - [Qualité du code](#qualité-du-code)
-  - [Pipeline OpenAgenda](#pipeline-openagenda)
+- [Pipeline OpenAgenda](#pipeline-openagenda)
+- [Préparation des documents pour l'indexation](#préparation-des-documents-pour-lindexation)
 
 ## Stack technique
 
@@ -34,6 +34,8 @@ Le **rapport technique** du projet sera rédigé dans [`docs/rapport_technique.m
 
 La documentation du pipeline OpenAgenda, du pré-processing et de la construction des documents textuels est détaillée dans [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md).
 
+La stratégie de chunking retenue avant les embeddings et l'indexation FAISS est présentée dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
+
 ## Structure du projet
 
 ```text
@@ -44,12 +46,18 @@ oc_project9_rag/
 │   ├── processed/                     # Données nettoyées ou transformées
 │   └── raw/                           # Données brutes collectées depuis OpenAgenda
 ├── docs/                              # Documentation projet et notes de démonstration
+│   ├── faiss_indexing.md              # Documentation du chunking et de la préparation FAISS
+│   ├── openagenda_exploration.md      # Notes d'exploration OpenAgenda
+│   └── openagenda_preprocessing.md    # Documentation du pré-processing OpenAgenda
 ├── echo_app/                          # Application principale Écho
 │   ├── api/main.py                    # Point d'entrée FastAPI
 │   ├── config.py                      # Configuration spécifique à l'application
 │   ├── indexing/                      # Création et mise à jour de l'index vectoriel
 │   └── rag/                           # Logique RAG : recherche, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
+│   ├── 01_openagenda_exploration.ipynb
+│   ├── 02_openagenda_preprocessing.ipynb
+│   └── 03_faiss_indexing.ipynb        # Exploration du chunking avant indexation
 ├── pyproject.toml                     # Configuration Poetry
 ├── README.md
 ├── scripts/                           # Scripts exécutables ponctuels
@@ -58,6 +66,7 @@ oc_project9_rag/
 │   ├── 03_clean_openagenda_events.py  # Nettoyage et normalisation des événements
 │   └── 04_build_event_documents.py    # Création des documents textuels pour le RAG
 ├── src/                               # Code commun et fonctions utilitaires
+│   ├── chunking.py                    # Découpage des documents en chunks indexables
 │   ├── config.py                      # Constantes, chemins et paramètres de collecte
 │   ├── documents.py                   # Construction des documents textuels indexables
 │   ├── openagenda.py                  # Client simple pour l'API OpenAgenda
@@ -80,6 +89,18 @@ poetry install --no-root
 # La version attendue est Python 3.12.
 poetry run python --version
 ```
+
+### Modèle spaCy optionnel
+
+Le notebook `notebooks/03_faiss_indexing.ipynb` compare aussi une stratégie exploratoire de chunking par phrases avec spaCy.
+Pour reproduire cette partie du notebook, installer le modèle français :
+
+```bash
+poetry run python -m spacy download fr_core_news_sm
+```
+
+Cette commande n'est pas nécessaire pour le pipeline principal de chunking, qui utilise `src/chunking.py`.
+
 ### Variables d'environnement
 
 Créer un fichier `.env` à partir du fichier d'exemple et renseigner la clé d'API `MISTRAL_API_KEY`.
@@ -103,8 +124,6 @@ poetry run python -c "from echo_app.config import MISTRAL_MODEL, OPENAGENDA_BASE
 poetry run python -c "from echo_app.config import get_mistral_api_key; print('Mistral key OK' if get_mistral_api_key() else 'Missing key')"
 ```
 
-## Commandes utiles
-
 ### Qualité du code
 
 ```bash
@@ -112,7 +131,15 @@ poetry run ruff check .
 poetry run pytest
 ```
 
-### Pipeline OpenAgenda
+Les tests couvrent actuellement :
+
+- les imports principaux du projet ;
+- les fonctions d’entrée / sortie ;
+- le nettoyage et le pré-processing OpenAgenda ;
+- la construction des documents textuels RAG ;
+- le chunking des documents avant indexation.
+
+## Pipeline OpenAgenda
 
 La collecte utilise une date de référence figée au `2026-05-01` afin de rendre le POC reproductible. Le pipeline transforme ensuite les événements bruts en événements nettoyés, puis en documents Markdown prêts pour le futur chunking et l’indexation FAISS.
 
@@ -143,3 +170,31 @@ Le fichier `events_documents.jsonl` contient un document par ligne, avec :
 
 - `document_text` : texte Markdown lisible et indexable ;
 - `metadata` : informations structurées conservées séparément, comme l’URL source, la ville, les dates, l’image et les coordonnées.
+
+## Préparation des documents pour l'indexation
+
+Les documents Markdown générés à partir des événements OpenAgenda sont préparés avant leur indexation vectorielle.
+
+Le notebook `notebooks/03_faiss_indexing.ipynb` compare plusieurs approches : sans chunking, chunking par taille, chunking Markdown et chunking spaCy par phrases.
+
+La documentation détaillée est disponible dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
+
+La stratégie de chunking retenue est volontairement simple :
+
+- les événements courts restent en un seul chunk ;
+- les événements longs sont découpés par taille avec un léger overlap ;
+- chaque chunk conserve `event_id`, `chunk_id`, `chunk_index`, `chunk_count` et les métadonnées de l'événement.
+
+
+
+> **Modèle spaCy optionnel** :
+>
+> Le notebook compare aussi une stratégie exploratoire de chunking par phrases avec spaCy.
+> Pour reproduire cette partie du notebook, installer le modèle français :
+>
+> ```bash
+> poetry run python -m spacy download fr_core_news_sm
+> ```
+>
+> Cette exploration a été réalisée ponctuellement dans le notebook avec spaCy et le modèle `fr_core_news_sm`.
+> spaCy n’est pas requis pour exécuter le pipeline principal de chunking, qui utilise `src/chunking.py`.
