@@ -9,6 +9,8 @@ Ce module orchestre la chaîne RAG :
 
 La recherche FAISS n'est jamais réimplémentée ici : RagService réutilise la
 fonction search_similar_events() existante dans echo_app.indexing.search.
+
+Les prompts métier sont centralisés dans echo_app.rag.prompts.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from __future__ import annotations
 from echo_app.config import MISTRAL_MODEL
 from echo_app.indexing.embeddings import get_mistral_client
 from echo_app.indexing.search import search_similar_events
+from echo_app.rag.prompts import RAG_SYSTEM_PROMPT, build_user_prompt
 
 
 DEFAULT_TOP_K = 5
@@ -24,22 +27,6 @@ CHUNK_SEPARATOR = "\n---\n"
 EMPTY_RESULT_ANSWER = (
     "Je n'ai trouvé aucun événement pertinent pour votre question."
 )
-
-SYSTEM_PROMPT = """Tu es Écho, un assistant culturel spécialisé dans les événements autour du
-Bassin d'Arcachon.
-
-Tu réponds à la question de l'utilisateur en t'appuyant uniquement sur le
-contexte fourni ci-dessous, qui contient des extraits d'événements indexés.
-
-Règles à suivre :
-- Réponds en français, dans un ton clair et bienveillant.
-- Utilise uniquement les informations présentes dans le contexte. Ne devine
-  pas, n'invente pas d'événement, ne crée pas d'URL.
-- Si le contexte ne permet pas de répondre, dis-le explicitement à
-  l'utilisateur.
-- Cite les événements en mentionnant leur titre et leur ville lorsque c'est
-  pertinent.
-- Reste concis : 2 à 5 phrases suffisent dans la plupart des cas."""
 
 
 def _format_chunk_header(rank: int, metadata: dict) -> str:
@@ -61,16 +48,6 @@ def build_context(results: list[dict]) -> str:
         text = (result.get("text") or "").strip()
         blocks.append(f"{header}\n{text}")
     return CHUNK_SEPARATOR.join(blocks)
-
-
-def build_user_prompt(question: str, context: str) -> str:
-    """Construit le contenu du message utilisateur (contexte + question)."""
-    return (
-        "Contexte (extraits d'événements) :\n"
-        f"{context}\n\n"
-        "Question de l'utilisateur :\n"
-        f"{question}"
-    )
 
 
 def extract_sources(results: list[dict]) -> list[dict]:
@@ -141,7 +118,7 @@ class RagService:
         response = client.chat.complete(
             model=self.model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": RAG_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=DEFAULT_TEMPERATURE,

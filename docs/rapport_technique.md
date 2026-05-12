@@ -267,14 +267,18 @@ Il est configurable via la variable d’environnement `MISTRAL_MODEL`. L’appel
 
 ### Prompting
 
+Le prompt système et le prompt utilisateur sont versionnés dans `echo_app/rag/prompts.py` (constante `RAG_SYSTEM_PROMPT` et fonction `build_user_prompt`). Cette séparation permet de les itérer indépendamment du code du service et de garder le cadrage métier facile à relire.
+
 Le prompt envoyé à Mistral est découpé en deux messages :
 
 - un message **système** qui définit la persona Écho et fixe les règles :
   - répondre uniquement à partir du contexte fourni ;
-  - ne pas inventer d’événement, ne pas créer d’URL ;
-  - rester en français, dans un ton clair et bienveillant ;
-  - reconnaître explicitement les cas où l’information manque ;
-  - rester concis (2 à 5 phrases dans la plupart des cas).
+  - ne jamais inventer d’événement, de date, de lieu, de prix ou d’URL ;
+  - rester en français, dans un ton clair, utile et bienveillant ;
+  - reconnaître explicitement les cas où le contexte ne permet pas de répondre ;
+  - citer les événements utilisés par leur titre et leur ville lorsque c’est pertinent ;
+  - rester concis (2 à 5 phrases dans la plupart des cas) ;
+  - pour une question hors sujet, indiquer poliment que le chatbot répond uniquement sur les événements présents dans le contexte.
 
 - un message **utilisateur** qui contient :
   - les chunks retrouvés par FAISS, numérotés `[1]` à `[N]` et séparés par une ligne `---`, chacun précédé d’une en-tête `[n] titre — ville (date)` ;
@@ -450,7 +454,8 @@ Les tests automatisés déjà en place couvrent :
 - les embeddings avec mocks ;
 - la construction et le chargement du vector store FAISS ;
 - la recherche sémantique avec mocks ;
-- la chaîne RAG : construction du contexte numéroté, dédoublonnage des sources, court-circuit sur résultats vides et validation des arguments, le tout sans appel réseau.
+- la chaîne RAG : construction du contexte numéroté, dédoublonnage des sources, court-circuit sur résultats vides et validation des arguments, le tout sans appel réseau ;
+- les prompts métier : présence des règles essentielles dans le prompt système et format du prompt utilisateur (contexte avant question, libellés explicites).
 
 Les cas d’erreur déjà testés incluent notamment :
 
@@ -595,6 +600,7 @@ Les principaux fichiers et dossiers sont :
 - `echo_app/indexing/faiss_store.py` : construction, sauvegarde et chargement du vector store ;
 - `echo_app/indexing/search.py` : recherche sémantique dans FAISS ;
 - `echo_app/rag/rag_service.py` : chaîne RAG (recherche, contexte, prompt, génération, sources) ;
+- `echo_app/rag/prompts.py` : prompts métier d’Écho (prompt système et prompt utilisateur) ;
 - `scripts/rebuild_index.py` : reconstruction complète de l’index ;
 - `scripts/06_test_semantic_search.py` : test manuel de la recherche sémantique ;
 - `scripts/07_test_rag_service.py` : test manuel de la chaîne RAG complète ;

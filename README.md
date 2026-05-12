@@ -216,34 +216,10 @@ poetry run python scripts/06_test_semantic_search.py
 
 Une fois l'index FAISS construit, la classe `RagService` permet de poser une question et d'obtenir une réponse générée par Mistral à partir des événements retrouvés. Le service réutilise la recherche sémantique existante (`search_similar_events`) et ne duplique pas la logique FAISS.
 
+Les prompts métier (cadrage d'Écho et format du message utilisateur) sont centralisés dans [`echo_app/rag/prompts.py`](echo_app/rag/prompts.py) afin de pouvoir être itérés indépendamment du code du service.
+
 Test manuel de la chaîne RAG complète (un appel API Mistral par question) :
 
 ```bash
 poetry run python scripts/07_test_rag_service.py
 ```
-
-Exemple d'utilisation en Python :
-
-```python
-from echo_app.rag import RagService
-
-service = RagService(top_k=5)
-response = service.ask("Quels événements autour de l'astronomie ?")
-print(response["answer"])
-for source in response["sources"]:
-    print("-", source["title"], "à", source["city"])
-```
-
-La réponse retournée a la structure suivante :
-
-```python
-{
-    "question": "...",
-    "answer": "...",
-    "sources": [
-        {"title": "...", "city": "...", "start_date": "...", "url": "..."}
-    ],
-}
-```
-
-Si aucun événement pertinent n'est trouvé, la réponse est renvoyée directement sans appel au modèle de génération, avec une `sources` vide.
