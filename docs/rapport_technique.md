@@ -1,0 +1,642 @@
+# Rapport technique - Écho, assistant intelligent de recommandation d’événements culturels
+
+## 1. Objectifs du projet
+
+### Contexte
+
+Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon.
+
+Le projet consiste à concevoir un système RAG, c’est-à-dire un système qui combine :
+
+- une base documentaire construite à partir d’événements OpenAgenda ;
+- une recherche vectorielle pour retrouver les événements proches d’une question utilisateur ;
+- un modèle de langage pour générer une réponse naturelle à partir des événements retrouvés.
+
+L’application développée dans le cadre du POC s’appelle **Écho**.
+
+### Problématique
+
+Les événements culturels sont souvent décrits dans des formats hétérogènes : descriptions longues ou courtes, champs parfois incomplets, dates multiples, lieux différents, liens externes, images et métadonnées diverses.
+
+Un système RAG répond à ce besoin car il permet de :
+
+- rechercher dans une base documentaire locale ;
+- retrouver les passages les plus pertinents pour une question ;
+- générer une réponse contextualisée ;
+- limiter les réponses inventées en s’appuyant sur les documents retrouvés.
+
+L’objectif n’est donc pas seulement de poser une question à un modèle de langage, mais de lui fournir un contexte fiable issu des événements collectés.
+
+### Objectif du POC
+
+Le POC doit démontrer la faisabilité technique d’un assistant culturel basé sur un système RAG.
+
+Les objectifs principaux sont :
+
+- collecter des événements depuis OpenAgenda ;
+- nettoyer et normaliser les données ;
+- transformer les événements en documents textuels exploitables ;
+- découper ces documents en chunks ;
+- générer des embeddings ;
+- construire un index vectoriel FAISS ;
+- tester la recherche sémantique ;
+- préparer l’intégration avec un modèle de langage ;
+- exposer le système via une API.
+
+### Périmètre
+
+Le périmètre du POC est volontairement limité afin de rester simple et maîtrisable.
+
+Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
+
+À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS et la recherche sémantique sont implémentés et testés. Les parties génération complète de réponse, API finale et évaluation du RAG seront complétées dans les étapes suivantes.
+
+## 2. Architecture du système
+
+### Vue globale
+
+L’architecture cible du système est la suivante :
+
+```text
+API OpenAgenda
+→ collecte des événements
+→ filtrage et nettoyage
+→ documents Markdown
+→ chunks
+→ embeddings Mistral
+→ index FAISS + métadonnées
+→ recherche sémantique
+→ contexte pour le modèle de langage
+→ réponse utilisateur via API
+```
+
+### Données entrantes
+
+Les données entrantes proviennent de l’API OpenAgenda via l’API Opendatasoft.
+
+Le pipeline de collecte et de préparation est découpé en plusieurs scripts :
+
+```text
+scripts/01_fetch_openagenda_events.py
+scripts/02_filter_openagenda_events.py
+scripts/03_clean_openagenda_events.py
+scripts/04_build_event_documents.py
+```
+
+Ces scripts produisent progressivement :
+
+```text
+data/raw/openagenda_events_raw.json
+data/processed/events_filtered.json
+data/processed/events_clean.json
+data/processed/events_documents.jsonl
+```
+
+Le fichier `events_documents.jsonl` est la base utilisée pour construire le vector store.
+
+### Prétraitement, embeddings et base vectorielle
+
+Les événements nettoyés sont transformés en documents Markdown. Ces documents sont ensuite découpés en chunks, puis vectorisés avec le modèle d’embedding Mistral.
+
+Les vecteurs sont stockés dans un index FAISS, tandis que les informations lisibles sont conservées séparément dans un fichier de métadonnées.
+
+### Intégration LLM
+
+L’intégration complète avec le modèle de langage sera réalisée dans la suite du projet.
+
+L’objectif est de fournir au modèle uniquement les chunks les plus pertinents retournés par FAISS, afin de générer une réponse basée sur les événements réellement présents dans la base documentaire.
+
+Le projet prévoit l’utilisation de Mistral pour la génération de texte et de LangChain pour organiser la chaîne RAG.
+
+### Exposition via API
+
+L’exposition via API sera réalisée avec FastAPI.
+
+L’API cible devra permettre notamment :
+
+- de poser une question au système ;
+- de récupérer une réponse générée ;
+- de reconstruire l’index si nécessaire.
+
+Cette partie sera complétée dans une étape ultérieure.
+
+### Technologies utilisées
+
+Les principales technologies utilisées sont :
+
+- Python 3.12 ;
+- Poetry pour la gestion de l’environnement ;
+- OpenAgenda / Opendatasoft pour les données ;
+- pandas pour l’exploration et la préparation des données ;
+- Mistral AI pour les embeddings et la génération future ;
+- FAISS pour l’index vectoriel ;
+- FastAPI pour l’API cible ;
+- pytest pour les tests automatisés ;
+- ruff pour la qualité du code.
+
+## 3. Préparation et vectorisation des données
+
+### Source de données
+
+Les événements sont collectés depuis OpenAgenda. La collecte récupère des événements culturels, puis le pipeline applique un filtrage afin de conserver un périmètre cohérent avec le POC.
+
+Une date de référence fixe est utilisée pour rendre le POC reproductible :
+
+```text
+2026-05-01
+```
+
+Ce choix permet d’obtenir des résultats stables pendant le développement et les démonstrations.
+
+### Nettoyage des données
+
+Les événements bruts contiennent des champs hétérogènes. Le nettoyage permet de produire des données plus régulières et plus faciles à indexer.
+
+Les traitements réalisés incluent notamment :
+
+- suppression ou conversion du HTML inutile ;
+- conversion du contenu utile en Markdown simple ;
+- normalisation des champs textuels ;
+- conservation des dates ;
+- conservation des informations de lieu ;
+- extraction ou conservation des coordonnées lorsque disponibles ;
+- suppression des liens bruts répétés dans le texte indexable.
+
+Les URL ne sont pas intégrées dans le texte indexable. Elles sont conservées dans les métadonnées afin de pouvoir être affichées après la recherche.
+
+### Construction des documents RAG
+
+Chaque événement est transformé en document RAG.
+
+Chaque document contient :
+
+- `document_text` : texte Markdown utilisé pour l’indexation ;
+- `metadata` : informations structurées conservées séparément.
+
+Exemples de métadonnées conservées :
+
+- titre ;
+- ville ;
+- dates ;
+- URL source ;
+- image ;
+- coordonnées ;
+- identifiant d’événement.
+
+Cette séparation permet de garder un texte propre pour les embeddings, tout en conservant les informations utiles pour l’affichage des résultats.
+
+### Chunking
+
+Avant la vectorisation, les documents sont découpés en chunks.
+
+L’objectif du chunking est d’éviter d’envoyer des textes trop longs au modèle d’embedding et d’améliorer la précision de la recherche. Un chunk représente un morceau de document qui peut être retrouvé indépendamment dans l’index FAISS.
+
+La stratégie retenue est volontairement simple :
+
+- les événements courts restent en un seul chunk ;
+- les événements longs sont découpés par taille ;
+- un léger overlap est ajouté entre deux chunks pour limiter la perte de contexte ;
+- les chunks trop petits sont évités ;
+- le titre de l’événement est rappelé dans les chunks découpés lorsque c’est possible.
+
+Les paramètres principaux sont :
+
+```text
+CHUNK_SIZE = 1200
+CHUNK_OVERLAP = 150
+MIN_CHUNK_SIZE = 200
+```
+
+Cette stratégie a été retenue car le corpus OpenAgenda utilisé contient majoritairement des documents courts. Un découpage plus complexe, par structure Markdown ou par phrases avec spaCy, a été exploré dans le notebook, mais il n’a pas été conservé dans le pipeline principal afin de garder une solution simple, robuste et facile à maintenir.
+
+### Génération des embeddings
+
+Chaque chunk est transformé en vecteur numérique avec le modèle d’embedding Mistral.
+
+Le modèle utilisé est :
+
+```text
+mistral-embed
+```
+
+Ce modèle produit des vecteurs de dimension :
+
+```text
+1024
+```
+
+La génération des embeddings est faite par batchs. Un batch n’est pas un chunk : un chunk est une unité de contenu, alors qu’un batch est simplement un groupe technique de plusieurs chunks envoyés ensemble à l’API Mistral.
+
+Cette logique permet d’éviter de faire un appel API séparé pour chaque chunk.
+
+Le pipeline vérifie également que les embeddings retournés ont bien la dimension attendue avant de les envoyer à FAISS. Cela évite de construire un index incohérent.
+
+## 4. Choix du modèle NLP
+
+### Modèle d’embedding
+
+Pour la vectorisation, le modèle retenu est :
+
+```text
+mistral-embed
+```
+
+Ce choix est cohérent avec le reste de la stack Mistral prévue pour le projet.
+
+Les raisons principales sont :
+
+- intégration simple via l’API Mistral ;
+- modèle adapté à des textes en langage naturel ;
+- dimension fixe de 1024 ;
+- compatibilité avec une indexation FAISS locale.
+
+### Modèle de génération
+
+Le modèle de génération sera utilisé dans la suite du projet pour produire les réponses finales à partir des chunks retrouvés.
+
+La variable d’environnement prévue est :
+
+```text
+MISTRAL_MODEL
+```
+
+Cette partie sera complétée lors de l’implémentation de la chaîne RAG complète.
+
+### Prompting
+
+Le prompting final n’est pas encore implémenté à cette étape.
+
+La logique cible sera de fournir au modèle :
+
+- la question utilisateur ;
+- les chunks les plus pertinents retrouvés par FAISS ;
+- une consigne demandant de répondre uniquement à partir du contexte fourni ;
+- éventuellement les liens ou métadonnées utiles pour citer les événements.
+
+### Limites du modèle
+
+La qualité des réponses dépendra de plusieurs facteurs :
+
+- qualité des descriptions OpenAgenda ;
+- pertinence des chunks retrouvés ;
+- capacité du modèle à respecter le contexte fourni ;
+- présence ou absence d’informations suffisantes dans les événements collectés.
+
+L’utilisation d’un système RAG réduit le risque de réponse inventée, mais ne le supprime pas complètement. Des tests d’évaluation seront nécessaires pour mesurer la qualité réelle des réponses.
+
+## 5. Construction de la base vectorielle
+
+### FAISS utilisé
+
+L’index vectoriel est construit avec FAISS à partir des embeddings générés.
+
+Le type d’index utilisé est :
+
+```text
+IndexFlatL2
+```
+
+Ce choix est adapté au POC car :
+
+- le volume de données est faible ;
+- l’index est simple à construire ;
+- la recherche est exacte ;
+- le fonctionnement est facile à expliquer.
+
+`IndexFlatL2` utilise une distance L2 pour comparer les vecteurs. Plus la distance est faible, plus le chunk est considéré comme proche de la requête utilisateur.
+
+Dans le corpus actuel, le pipeline produit :
+
+```text
+138 documents OpenAgenda
+→ 155 chunks
+→ 155 embeddings
+→ 155 vecteurs dans FAISS
+```
+
+Le nombre de vecteurs est supérieur au nombre de documents car certains documents longs sont découpés en plusieurs chunks.
+
+### Stratégie de persistance
+
+Le vector store est sauvegardé localement dans le dossier :
+
+```text
+vector_store/
+```
+
+Deux fichiers principaux sont générés :
+
+```text
+vector_store/index.faiss
+vector_store/metadata.json
+```
+
+Le fichier `index.faiss` contient les vecteurs numériques utilisés par FAISS pour la recherche.
+
+Le fichier `metadata.json` contient les informations associées à chaque vecteur.
+
+Ces fichiers sont générés localement et ne doivent pas être versionnés dans Git.
+
+### Métadonnées associées
+
+FAISS stocke les vecteurs, mais ne conserve pas directement les informations lisibles comme le titre, la ville, les dates ou l’URL de l’événement.
+
+Le fichier `metadata.json` permet donc de faire le lien entre un résultat FAISS et le contenu affichable.
+
+Chaque entrée contient notamment :
+
+- `faiss_id` ;
+- `chunk_id` ;
+- `event_id` ;
+- `chunk_index` ;
+- `chunk_count` ;
+- `chunk_text` ;
+- `metadata`.
+
+Le mapping entre `faiss_id` et `metadata.json` permet de retrouver le contenu textuel et les informations d’affichage après une recherche vectorielle.
+
+### Reconstruction de l’index
+
+L’index peut être reconstruit avec la commande suivante :
+
+```bash
+poetry run python scripts/rebuild_index.py
+```
+
+Cette commande régénère entièrement le vector store à partir des documents pré-processés.
+
+Elle exécute les étapes suivantes :
+
+1. chargement des documents depuis `data/processed/events_documents.jsonl` ;
+2. construction des chunks ;
+3. génération des embeddings avec Mistral ;
+4. construction de l’index FAISS ;
+5. sauvegarde de `index.faiss` et `metadata.json` dans `vector_store/`.
+
+Cette reconstruction est utile lorsque les données changent ou lorsque la stratégie de chunking est modifiée. Dans cette première version, l’index est reconstruit entièrement plutôt que mis à jour partiellement. Ce choix est plus simple et plus fiable pour un POC.
+
+## 6. API et endpoints exposés
+
+### Framework utilisé
+
+L’API cible du projet est prévue avec FastAPI.
+
+FastAPI est adapté au POC car il permet de créer rapidement une API Python typée, documentée automatiquement et facile à tester.
+
+### Endpoints cibles
+
+Les endpoints finaux seront complétés dans la suite du projet.
+
+Les endpoints prévus sont :
+
+```text
+POST /ask
+POST /rebuild
+```
+
+`/ask` permettra d’envoyer une question utilisateur et de récupérer une réponse du système RAG.
+
+`/rebuild` pourra éventuellement servir à reconstruire l’index vectoriel si nécessaire.
+
+À ce stade du projet, la recherche sémantique est disponible côté code, mais l’API complète n’est pas encore finalisée.
+
+### Format cible des requêtes et réponses
+
+Format cible pour `/ask` :
+
+```json
+{
+  "question": "Quels événements autour de l’astronomie sont disponibles ?"
+}
+```
+
+Format cible de réponse :
+
+```json
+{
+  "answer": "...",
+  "sources": [
+    {
+      "title": "Initiation à l'astronomie à Lanton",
+      "city": "Lanton",
+      "url": "https://openagenda.com/..."
+    }
+  ]
+}
+```
+
+Ce format pourra évoluer lors de l’implémentation finale de l’API.
+
+### Tests et gestion des erreurs
+
+Les tests automatisés déjà en place couvrent :
+
+- les imports principaux ;
+- les fonctions d’entrée / sortie ;
+- le nettoyage et le pré-processing OpenAgenda ;
+- la construction des documents RAG ;
+- le chunking ;
+- les embeddings avec mocks ;
+- la construction et le chargement du vector store FAISS ;
+- la recherche sémantique avec mocks.
+
+Les cas d’erreur déjà testés incluent notamment :
+
+- requête vide ;
+- `top_k` invalide ;
+- vector store manquant ;
+- embeddings vides ;
+- dimension d’embedding incohérente.
+
+## 7. Évaluation du système
+
+### État actuel de l’évaluation
+
+À ce stade, l’évaluation complète du RAG n’est pas encore implémentée, car la chaîne finale de génération de réponse n’est pas terminée.
+
+Une première validation technique a cependant été réalisée sur la recherche sémantique.
+
+Le script suivant permet de tester plusieurs requêtes :
+
+```bash
+poetry run python scripts/06_test_semantic_search.py
+```
+
+Exemples de requêtes utilisées :
+
+- `astronomie` ;
+- `concert à Andernos` ;
+- `activité en famille` ;
+- `exposition Bassin d’Arcachon` ;
+- `événement gratuit`.
+
+### Résultats observés
+
+La requête `astronomie` retrouve bien les chunks associés à l’événement :
+
+```text
+Initiation à l'astronomie à Lanton
+```
+
+Cela valide le fonctionnement de la chaîne :
+
+```text
+requête utilisateur
+→ embedding Mistral
+→ recherche FAISS
+→ récupération des chunks
+→ récupération des métadonnées
+```
+
+Certaines requêtes composées donnent des résultats moins précis. Par exemple, une requête combinant un type d’événement et une commune peut favoriser la commune plutôt que le type d’événement.
+
+Cette limite est normale pour une première recherche sémantique brute, sans filtre métier ni reranking.
+
+### Évaluation cible
+
+L’évaluation complète devra s’appuyer sur un jeu de test annoté.
+
+Ce jeu de test devra contenir :
+
+- des questions utilisateur réalistes ;
+- les événements attendus ;
+- les critères permettant de juger la réponse ;
+- éventuellement un score qualitatif.
+
+Les métriques possibles sont :
+
+- taux de récupération d’un événement attendu dans le top-k ;
+- qualité de la réponse générée ;
+- présence des informations importantes ;
+- absence d’invention ;
+- satisfaction subjective sur un petit jeu de test.
+
+Cette partie sera complétée lorsque la chaîne RAG complète sera disponible.
+
+## 8. Recommandations et perspectives
+
+### Ce qui fonctionne bien
+
+Le POC valide déjà plusieurs briques importantes :
+
+- les données OpenAgenda peuvent être collectées et préparées ;
+- les événements peuvent être transformés en documents Markdown ;
+- le chunking produit des unités de recherche exploitables ;
+- les embeddings Mistral sont générés correctement ;
+- l’index FAISS est construit et persistant ;
+- la recherche sémantique fonctionne sur des requêtes simples ;
+- les métadonnées permettent de retrouver les informations affichables.
+
+### Limites du POC
+
+Cette première version présente plusieurs limites :
+
+- la qualité dépend fortement des descriptions OpenAgenda ;
+- les événements très courts donnent parfois peu de contexte au modèle d’embedding ;
+- la recherche sémantique brute ne gère pas encore parfaitement les requêtes composées ;
+- les filtres métier par date, commune ou gratuité ne sont pas encore appliqués directement ;
+- l’index doit être reconstruit lorsque les données changent ;
+- l’API et la génération finale de réponse ne sont pas encore finalisées.
+
+### Améliorations possibles
+
+Les améliorations possibles sont :
+
+- ajouter des filtres sur les métadonnées, par exemple ville, date ou gratuité ;
+- ajouter une recherche hybride combinant recherche vectorielle et recherche par mots-clés ;
+- ajouter un reranking des résultats avant génération ;
+- améliorer le prompt de génération ;
+- construire un jeu de test annoté ;
+- évaluer automatiquement la qualité des réponses ;
+- exposer le système via une API FastAPI complète ;
+- préparer un déploiement avec Docker.
+
+## 9. Organisation du dépôt GitHub
+
+L’organisation du dépôt est la suivante :
+
+```text
+oc_project9_rag/
+├── data/                  # Données brutes et transformées, non versionnées
+├── docs/                  # Documentation projet et rapport technique
+├── echo_app/              # Code de l’application Écho
+│   ├── api/               # API FastAPI cible
+│   ├── indexing/          # Embeddings, FAISS et recherche sémantique
+│   └── rag/               # Chaîne RAG cible
+├── notebooks/             # Notebooks d’exploration et de validation
+├── scripts/               # Scripts exécutables du pipeline
+├── src/                   # Fonctions communes de collecte, nettoyage, documents et chunking
+├── tests/                 # Tests automatisés
+└── vector_store/          # Index FAISS généré localement, non versionné
+```
+
+### Fichiers et dossiers clés
+
+Les principaux fichiers et dossiers sont :
+
+- `src/openagenda.py` : client simple pour l’API OpenAgenda ;
+- `src/preprocessing.py` : nettoyage et normalisation des événements ;
+- `src/documents.py` : construction des documents RAG ;
+- `src/chunking.py` : découpage des documents en chunks ;
+- `echo_app/indexing/embeddings.py` : génération des embeddings Mistral ;
+- `echo_app/indexing/faiss_store.py` : construction, sauvegarde et chargement du vector store ;
+- `echo_app/indexing/search.py` : recherche sémantique dans FAISS ;
+- `scripts/rebuild_index.py` : reconstruction complète de l’index ;
+- `scripts/06_test_semantic_search.py` : test manuel de la recherche sémantique ;
+- `notebooks/03_faiss_indexing.ipynb` : exploration du chunking, de FAISS et de la recherche.
+
+## 10. Annexes
+
+### Commandes utiles
+
+Reconstruction de l’index :
+
+```bash
+poetry run python scripts/rebuild_index.py
+```
+
+Test manuel de la recherche sémantique :
+
+```bash
+poetry run python scripts/06_test_semantic_search.py
+```
+
+Tests automatisés :
+
+```bash
+poetry run pytest -v
+```
+
+Qualité du code :
+
+```bash
+poetry run ruff check .
+```
+
+### Exemple de recherche sémantique
+
+Exemple de requête :
+
+```text
+astronomie
+```
+
+Résultat observé dans les premiers résultats :
+
+```text
+Initiation à l'astronomie à Lanton
+```
+
+Ce résultat montre que la recherche sémantique retrouve correctement un événement dont le contenu est proche de la requête utilisateur.
+
+### Points à compléter dans la suite du projet
+
+Les éléments suivants devront être complétés dans les prochaines étapes :
+
+- implémentation complète de la chaîne RAG ;
+- prompt final utilisé pour la génération ;
+- API FastAPI finalisée ;
+- endpoints documentés ;
+- jeu de test annoté ;
+- évaluation quantitative et qualitative ;
+- recommandations finales après évaluation.
