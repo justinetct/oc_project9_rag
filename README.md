@@ -143,7 +143,8 @@ Les tests couvrent actuellement :
 - la génération d'embeddings Mistral avec des tests mockés, sans appel réseau ;
 - les prompts métier du chatbot Écho ;
 - l'assemblage des messages LangChain sans appel réseau ;
-- la chaîne RAG avec recherche, construction du contexte et génération mockée.
+- la chaîne RAG avec recherche, construction du contexte et génération mockée ;
+- la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`).
 
 ## Pipeline OpenAgenda
 
@@ -229,3 +230,5 @@ Test manuel de la chaîne RAG complète (un appel API Mistral par question) :
 ```bash
 poetry run python scripts/07_test_rag_service.py
 ```
+
+Le fichier [`data/evaluation/qa_annotated.csv`](data/evaluation/qa_annotated.csv) contient un premier jeu de test annoté de 15 questions pour préparer l'évaluation du RAG.

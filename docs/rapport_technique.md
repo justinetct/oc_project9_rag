@@ -1,5 +1,18 @@
 # Rapport technique - Écho, assistant intelligent de recommandation d’événements culturels
 
+## Sommaire
+
+1. [Objectifs du projet](#1-objectifs-du-projet)
+2. [Architecture du système](#2-architecture-du-système)
+3. [Préparation et vectorisation des données](#3-préparation-et-vectorisation-des-données)
+4. [Choix du modèle NLP](#4-choix-du-modèle-nlp)
+5. [Construction de la base vectorielle](#5-construction-de-la-base-vectorielle)
+6. [API et endpoints exposés](#6-api-et-endpoints-exposés)
+7. [Évaluation du système](#7-évaluation-du-système)
+8. [Recommandations et perspectives](#8-recommandations-et-perspectives)
+9. [Organisation du dépôt GitHub](#9-organisation-du-dépôt-github)
+10. [Annexes](#10-annexes)
+
 ## 1. Objectifs du projet
 
 ### Contexte
@@ -475,11 +488,27 @@ Les cas d’erreur déjà testés incluent notamment :
 
 ### État actuel de l’évaluation
 
-À ce stade, l’évaluation quantitative complète du RAG n’est pas encore implémentée. La chaîne de génération est disponible via `RagService`, ce qui permet maintenant de construire un jeu de test annoté et de mesurer la qualité des réponses lors de l’étape d’évaluation.
+À ce stade, l’évaluation quantitative complète du RAG n’est pas encore implémentée. La chaîne de génération est disponible via `RagService`, ce qui permet maintenant de mesurer la qualité des réponses sur un jeu de questions annotées.
 
 Une première validation technique a déjà été réalisée sur la recherche sémantique, et le script `scripts/07_test_rag_service.py` permet une validation manuelle de la chaîne complète sur quelques questions types.
 
-Le script suivant permet de tester plusieurs requêtes :
+### Jeu de test annoté
+
+Un premier jeu de questions/réponses annoté a été créé et stocké dans `data/evaluation/qa_annotated.csv`. Il contient 15 questions et couvre plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité. Il intègre également un cas hors sujet lié à une demande de restaurant, qui sert à vérifier que le système refuse d’inventer une réponse hors du contexte fourni.
+
+Chaque ligne du CSV contient cinq colonnes :
+
+- `question` : la requête utilisateur ;
+- `expected_answer` : la réponse attendue, rédigée comme description de ce que le système devrait produire ;
+- `expected_keywords` : les mots-clés attendus dans la réponse (séparés par des points-virgules) ;
+- `expected_event_ids` : les identifiants d’événements OpenAgenda attendus dans les sources (peut être vide pour les cas hors sujet) ;
+- `comment` : une note interne sur l’intention de la question.
+
+Ce jeu servira ensuite à l’évaluation qualitative ou quantitative du RAG, par exemple via un calcul de rappel des `event_ids` attendus et la vérification de la présence des keywords dans la réponse générée.
+
+### Validation technique actuelle
+
+La recherche sémantique peut être vérifiée manuellement avec le script suivant :
 
 ```bash
 poetry run python scripts/06_test_semantic_search.py
@@ -517,24 +546,17 @@ Cette limite est normale pour une première recherche sémantique brute, sans fi
 
 ### Évaluation cible
 
-L’évaluation complète devra s’appuyer sur un jeu de test annoté.
-
-Ce jeu de test devra contenir :
-
-- des questions utilisateur réalistes ;
-- les événements attendus ;
-- les critères permettant de juger la réponse ;
-- éventuellement un score qualitatif.
+L’évaluation complète devra s’appuyer sur le jeu de test annoté.
 
 Les métriques possibles sont :
 
-- taux de récupération d’un événement attendu dans le top-k ;
-- qualité de la réponse générée ;
-- présence des informations importantes ;
-- absence d’invention ;
-- satisfaction subjective sur un petit jeu de test.
+* taux de récupération d’un événement attendu dans le top-k ;
+* présence des mots-clés attendus dans la réponse ;
+* qualité de la réponse générée ;
+* absence d’invention ;
+* satisfaction subjective sur un petit jeu de test.
 
-Cette partie sera complétée dans une étape suivante, à partir de la chaîne RAG maintenant disponible.
+Cette partie sera complétée dans une étape suivante, à partir de la chaîne RAG maintenant disponible et du fichier data/evaluation/qa_annotated.csv.
 
 ## 8. Recommandations et perspectives
 
@@ -570,7 +592,7 @@ Les améliorations possibles sont :
 - ajouter une recherche hybride combinant recherche vectorielle et recherche par mots-clés ;
 - ajouter un reranking des résultats avant génération ;
 - améliorer le prompt de génération ;
-- construire un jeu de test annoté ;
+- exploiter le jeu de test annoté dans un script d’évaluation ;
 - évaluer automatiquement la qualité des réponses ;
 - exposer le système via une API FastAPI complète ;
 - préparer un déploiement avec Docker.
@@ -667,8 +689,8 @@ Ce résultat montre que la recherche sémantique retrouve correctement un évén
 
 Les éléments suivants devront être complétés dans les prochaines étapes :
 
+- script d’évaluation automatique du RAG ;
 - API FastAPI finalisée ;
 - endpoints documentés ;
-- jeu de test annoté ;
 - évaluation quantitative et qualitative ;
 - recommandations finales après évaluation.
