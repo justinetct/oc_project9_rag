@@ -18,6 +18,7 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
   - [Qualité du code](#qualité-du-code)
 - [Pipeline OpenAgenda](#pipeline-openagenda)
 - [Préparation des documents pour l'indexation](#préparation-des-documents-pour-lindexation)
+- [Chaîne RAG](#chaîne-rag)
 
 ## Stack technique
 
@@ -48,7 +49,8 @@ oc_project9_rag/
 ├── docs/                              # Documentation du projet
 │   ├── faiss_indexing.md              # Documentation du chunking et de la préparation FAISS
 │   ├── openagenda_exploration.md      # Notes d'exploration OpenAgenda
-│   └── openagenda_preprocessing.md    # Documentation du pré-processing OpenAgenda
+│   ├── openagenda_preprocessing.md    # Documentation du pré-processing OpenAgenda
+│   └── rapport_technique.md           # Rapport technique du POC
 ├── echo_app/                          # Application principale Écho
 │   ├── api/main.py                    # Point d'entrée FastAPI
 │   ├── config.py                      # Configuration spécifique à l'application
@@ -57,6 +59,7 @@ oc_project9_rag/
 │   │   ├── faiss_store.py             # Construction et sauvegarde du vector store FAISS
 │   │   └── search.py                  # Recherche sémantique sur l'index FAISS
 │   └── rag/                           # Logique RAG : recherche, prompt et génération
+│       └── rag_service.py             # Service RAG : recherche, contexte, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
 │   ├── 01_openagenda_exploration.ipynb
 │   ├── 02_openagenda_preprocessing.ipynb
@@ -70,6 +73,7 @@ oc_project9_rag/
 │   ├── 04_build_event_documents.py    # Création des documents textuels pour le RAG
 │   ├── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
 │   ├── 06_test_semantic_search.py     # Test manuel de la recherche sémantique
+│   ├── 07_test_rag_service.py         # Test manuel de la chaîne RAG complète
 │   └── rebuild_index.py               # Commande principale de reconstruction du vector store FAISS
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
@@ -99,7 +103,7 @@ poetry run python --version
 
 ### Variables d'environnement
 
-Créer un fichier `.env` à partir du fichier d'exemple et renseigner la clé d'API `MISTRAL_API_KEY`. Le modèle d'embeddings est configuré avec `MISTRAL_EMBEDDING_MODEL`.
+Créer un fichier `.env` à partir du fichier d'exemple et renseigner la clé d'API `MISTRAL_API_KEY`. Deux modèles Mistral sont distingués : `MISTRAL_MODEL` pour la génération de réponse et `MISTRAL_EMBEDDING_MODEL` pour les embeddings.
 
 ```bash
 cp .env.example .env
@@ -114,7 +118,7 @@ Tester que les principales dépendances sont correctement installées :
 poetry run python -c "import pandas, requests, dotenv, pydantic, fastapi, langchain, faiss, mistralai; print('Imports OK')"
 
 # Test du chargement de la configuration
-poetry run python -c "from echo_app.config import MISTRAL_MODEL, OPENAGENDA_BASE_URL; from echo_app.indexing.embeddings import DEFAULT_EMBEDDING_MODEL; print(MISTRAL_MODEL); print(DEFAULT_EMBEDDING_MODEL); print(OPENAGENDA_BASE_URL)"
+poetry run python -c "from echo_app.config import MISTRAL_MODEL; from echo_app.indexing.embeddings import DEFAULT_EMBEDDING_MODEL; from src.config import OPENAGENDA_BASE_URL; print(MISTRAL_MODEL); print(DEFAULT_EMBEDDING_MODEL); print(OPENAGENDA_BASE_URL)"
 
 # Test de la présence de la clé Mistral
 poetry run python -c "from echo_app.config import get_mistral_api_key; print('Mistral key OK' if get_mistral_api_key() else 'Missing key')"
@@ -134,7 +138,8 @@ Les tests couvrent actuellement :
 - le nettoyage et le pré-processing OpenAgenda ;
 - la construction des documents textuels RAG ;
 - le chunking des documents avant indexation ;
-- la génération d'embeddings Mistral avec des tests mockés, sans appel réseau.
+- la génération d'embeddings Mistral avec des tests mockés, sans appel réseau ;
+- la chaîne RAG avec recherche, construction du prompt et génération mockée.
 
 ## Pipeline OpenAgenda
 
@@ -206,3 +211,39 @@ Une fois l'index reconstruit, un script permet de tester la recherche sémantiqu
 ```bash
 poetry run python scripts/06_test_semantic_search.py
 ```
+
+## Chaîne RAG
+
+Une fois l'index FAISS construit, la classe `RagService` permet de poser une question et d'obtenir une réponse générée par Mistral à partir des événements retrouvés. Le service réutilise la recherche sémantique existante (`search_similar_events`) et ne duplique pas la logique FAISS.
+
+Test manuel de la chaîne RAG complète (un appel API Mistral par question) :
+
+```bash
+poetry run python scripts/07_test_rag_service.py
+```
+
+Exemple d'utilisation en Python :
+
+```python
+from echo_app.rag import RagService
+
+service = RagService(top_k=5)
+response = service.ask("Quels événements autour de l'astronomie ?")
+print(response["answer"])
+for source in response["sources"]:
+    print("-", source["title"], "à", source["city"])
+```
+
+La réponse retournée a la structure suivante :
+
+```python
+{
+    "question": "...",
+    "answer": "...",
+    "sources": [
+        {"title": "...", "city": "...", "start_date": "...", "url": "..."}
+    ],
+}
+```
+
+Si aucun événement pertinent n'est trouvé, la réponse est renvoyée directement sans appel au modèle de génération, avec une `sources` vide.

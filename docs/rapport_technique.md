@@ -49,7 +49,7 @@ Le périmètre du POC est volontairement limité afin de rester simple et maîtr
 
 Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
 
-À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS et la recherche sémantique sont implémentés et testés. Les parties génération complète de réponse, API finale et évaluation du RAG seront complétées dans les étapes suivantes.
+À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS, la recherche sémantique et la chaîne RAG (recherche + génération Mistral) sont implémentés et testés. Les parties API finale et évaluation du RAG seront complétées dans les étapes suivantes.
 
 ## 2. Architecture du système
 
@@ -102,12 +102,15 @@ Les vecteurs sont stockés dans un index FAISS, tandis que les informations lisi
 
 ### Intégration LLM
 
-L’intégration complète avec le modèle de langage sera réalisée dans la suite du projet.
+L’intégration avec le modèle de langage est portée par la classe `RagService`, dans `echo_app/rag/rag_service.py`. Cette classe orchestre :
 
-L’objectif est de fournir au modèle uniquement les chunks les plus pertinents retournés par FAISS, afin de générer une réponse basée sur les événements réellement présents dans la base documentaire.
+1. la recherche FAISS via la fonction existante `search_similar_events()` ;
+2. la construction d’un contexte numéroté à partir des chunks retrouvés ;
+3. la construction d’un message utilisateur combinant le contexte et la question ;
+4. l’appel à Mistral via `client.chat.complete()` ;
+5. l’extraction d’une liste de sources lisibles, dédoublonnée par `event_id`.
 
-Le projet prévoit l’utilisation de Mistral pour la génération de texte et de LangChain pour organiser la chaîne RAG.
-
+Le modèle de génération utilisé est `mistral-small-latest`, configurable via la variable d’environnement `MISTRAL_MODEL`. Le client Mistral est créé uniquement au moment de générer une réponse, ce qui permet d’instancier `RagService` sans clé API en environnement de test.
 ### Exposition via API
 
 L’exposition via API sera réalisée avec FastAPI.
@@ -128,7 +131,7 @@ Les principales technologies utilisées sont :
 - Poetry pour la gestion de l’environnement ;
 - OpenAgenda / Opendatasoft pour les données ;
 - pandas pour l’exploration et la préparation des données ;
-- Mistral AI pour les embeddings et la génération future ;
+- Mistral AI pour les embeddings et la génération de réponse ;
 - FAISS pour l’index vectoriel ;
 - FastAPI pour l’API cible ;
 - pytest pour les tests automatisés ;
@@ -252,26 +255,34 @@ Les raisons principales sont :
 
 ### Modèle de génération
 
-Le modèle de génération sera utilisé dans la suite du projet pour produire les réponses finales à partir des chunks retrouvés.
+Le modèle de génération est utilisé pour produire la réponse finale à partir des chunks retrouvés par la recherche sémantique.
 
-La variable d’environnement prévue est :
+Le modèle par défaut est :
 
 ```text
-MISTRAL_MODEL
+mistral-small-latest
 ```
 
-Cette partie sera complétée lors de l’implémentation de la chaîne RAG complète.
+Il est configurable via la variable d’environnement `MISTRAL_MODEL`. L’appel est effectué via `client.chat.complete()` du SDK Mistral, dans la méthode `_generate_answer()` de `RagService`. Cette méthode est isolée pour permettre un mock simple dans les tests.
 
 ### Prompting
 
-Le prompting final n’est pas encore implémenté à cette étape.
+Le prompt envoyé à Mistral est découpé en deux messages :
 
-La logique cible sera de fournir au modèle :
+- un message **système** qui définit la persona Écho et fixe les règles :
+  - répondre uniquement à partir du contexte fourni ;
+  - ne pas inventer d’événement, ne pas créer d’URL ;
+  - rester en français, dans un ton clair et bienveillant ;
+  - reconnaître explicitement les cas où l’information manque ;
+  - rester concis (2 à 5 phrases dans la plupart des cas).
 
-- la question utilisateur ;
-- les chunks les plus pertinents retrouvés par FAISS ;
-- une consigne demandant de répondre uniquement à partir du contexte fourni ;
-- éventuellement les liens ou métadonnées utiles pour citer les événements.
+- un message **utilisateur** qui contient :
+  - les chunks retrouvés par FAISS, numérotés `[1]` à `[N]` et séparés par une ligne `---`, chacun précédé d’une en-tête `[n] titre — ville (date)` ;
+  - la question utilisateur à la suite du contexte.
+
+Le paramètre `temperature=0.2` est utilisé pour limiter la créativité du modèle et privilégier des réponses ancrées dans le contexte.
+
+Si la recherche FAISS retourne zéro résultat, le service court-circuite l’appel au modèle et renvoie directement une réponse explicite (« Je n’ai trouvé aucun événement pertinent pour votre question. ») avec une liste de sources vide. Cela évite un appel API inutile et garantit un comportement déterministe.
 
 ### Limites du modèle
 
@@ -398,7 +409,7 @@ POST /rebuild
 
 `/rebuild` pourra éventuellement servir à reconstruire l’index vectoriel si nécessaire.
 
-À ce stade du projet, la recherche sémantique est disponible côté code, mais l’API complète n’est pas encore finalisée.
+À ce stade du projet, la recherche sémantique et la chaîne RAG sont disponibles côté code via la classe `RagService`, mais l’API HTTP n’est pas encore finalisée. L’endpoint `/ask` consommera directement `RagService.ask()` lors de l’étape suivante.
 
 ### Format cible des requêtes et réponses
 
@@ -438,7 +449,8 @@ Les tests automatisés déjà en place couvrent :
 - le chunking ;
 - les embeddings avec mocks ;
 - la construction et le chargement du vector store FAISS ;
-- la recherche sémantique avec mocks.
+- la recherche sémantique avec mocks ;
+- la chaîne RAG : construction du contexte numéroté, dédoublonnage des sources, court-circuit sur résultats vides et validation des arguments, le tout sans appel réseau.
 
 Les cas d’erreur déjà testés incluent notamment :
 
@@ -452,9 +464,9 @@ Les cas d’erreur déjà testés incluent notamment :
 
 ### État actuel de l’évaluation
 
-À ce stade, l’évaluation complète du RAG n’est pas encore implémentée, car la chaîne finale de génération de réponse n’est pas terminée.
+À ce stade, l’évaluation quantitative complète du RAG n’est pas encore implémentée. La chaîne de génération est disponible via `RagService`, ce qui permet maintenant de construire un jeu de test annoté et de mesurer la qualité des réponses lors de l’étape d’évaluation.
 
-Une première validation technique a cependant été réalisée sur la recherche sémantique.
+Une première validation technique a déjà été réalisée sur la recherche sémantique, et le script `scripts/07_test_rag_service.py` permet une validation manuelle de la chaîne complète sur quelques questions types.
 
 Le script suivant permet de tester plusieurs requêtes :
 
@@ -511,7 +523,7 @@ Les métriques possibles sont :
 - absence d’invention ;
 - satisfaction subjective sur un petit jeu de test.
 
-Cette partie sera complétée lorsque la chaîne RAG complète sera disponible.
+Cette partie sera complétée dans une étape suivante, à partir de la chaîne RAG maintenant disponible.
 
 ## 8. Recommandations et perspectives
 
@@ -525,7 +537,8 @@ Le POC valide déjà plusieurs briques importantes :
 - les embeddings Mistral sont générés correctement ;
 - l’index FAISS est construit et persistant ;
 - la recherche sémantique fonctionne sur des requêtes simples ;
-- les métadonnées permettent de retrouver les informations affichables.
+- les métadonnées permettent de retrouver les informations affichables ;
+- la chaîne RAG combine recherche, prompt contrôlé et génération Mistral pour produire une réponse structurée avec sources.
 
 ### Limites du POC
 
@@ -536,7 +549,7 @@ Cette première version présente plusieurs limites :
 - la recherche sémantique brute ne gère pas encore parfaitement les requêtes composées ;
 - les filtres métier par date, commune ou gratuité ne sont pas encore appliqués directement ;
 - l’index doit être reconstruit lorsque les données changent ;
-- l’API et la génération finale de réponse ne sont pas encore finalisées.
+- l’API FastAPI n’est pas encore finalisée.
 
 ### Améliorations possibles
 
@@ -562,7 +575,7 @@ oc_project9_rag/
 ├── echo_app/              # Code de l’application Écho
 │   ├── api/               # API FastAPI cible
 │   ├── indexing/          # Embeddings, FAISS et recherche sémantique
-│   └── rag/               # Chaîne RAG cible
+│   └── rag/               # Chaîne RAG 
 ├── notebooks/             # Notebooks d’exploration et de validation
 ├── scripts/               # Scripts exécutables du pipeline
 ├── src/                   # Fonctions communes de collecte, nettoyage, documents et chunking
@@ -581,8 +594,10 @@ Les principaux fichiers et dossiers sont :
 - `echo_app/indexing/embeddings.py` : génération des embeddings Mistral ;
 - `echo_app/indexing/faiss_store.py` : construction, sauvegarde et chargement du vector store ;
 - `echo_app/indexing/search.py` : recherche sémantique dans FAISS ;
+- `echo_app/rag/rag_service.py` : chaîne RAG (recherche, contexte, prompt, génération, sources) ;
 - `scripts/rebuild_index.py` : reconstruction complète de l’index ;
 - `scripts/06_test_semantic_search.py` : test manuel de la recherche sémantique ;
+- `scripts/07_test_rag_service.py` : test manuel de la chaîne RAG complète ;
 - `notebooks/03_faiss_indexing.ipynb` : exploration du chunking, de FAISS et de la recherche.
 
 ## 10. Annexes
@@ -599,6 +614,12 @@ Test manuel de la recherche sémantique :
 
 ```bash
 poetry run python scripts/06_test_semantic_search.py
+```
+
+Test manuel de la chaîne RAG complète :
+
+```bash
+poetry run python scripts/07_test_rag_service.py
 ```
 
 Tests automatisés :
@@ -633,8 +654,6 @@ Ce résultat montre que la recherche sémantique retrouve correctement un évén
 
 Les éléments suivants devront être complétés dans les prochaines étapes :
 
-- implémentation complète de la chaîne RAG ;
-- prompt final utilisé pour la génération ;
 - API FastAPI finalisée ;
 - endpoints documentés ;
 - jeu de test annoté ;
