@@ -62,7 +62,7 @@ Le périmètre du POC est volontairement limité afin de rester simple et maîtr
 
 Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
 
-À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS, la recherche sémantique et la chaîne RAG (recherche FAISS + prompting LangChain + génération Mistral) sont implémentés et testés. Les parties API finale et évaluation du RAG seront complétées dans les étapes suivantes.
+À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS, la recherche sémantique, la chaîne RAG (recherche FAISS + prompting LangChain + génération Mistral) et une évaluation automatique simple sur un jeu de test annoté sont implémentés et testés. Seule l’API finale reste à compléter dans les étapes suivantes.
 
 ## 2. Architecture du système
 
@@ -488,13 +488,15 @@ Les cas d’erreur déjà testés incluent notamment :
 
 ### État actuel de l’évaluation
 
-À ce stade, l’évaluation quantitative complète du RAG n’est pas encore implémentée. La chaîne de génération est disponible via `RagService`, ce qui permet maintenant de mesurer la qualité des réponses sur un jeu de questions annotées.
+Une évaluation automatique simple est désormais implémentée via le script `scripts/08_evaluate_rag.py`. Elle rejoue les 15 questions du jeu annoté sur `RagService.ask()` et calcule des métriques reproductibles (`keyword_match_rate`, `event_recall`, `sources_count`, `status`). Elle donne une première base reproductible pour suivre la qualité des réponses, tout en restant volontairement limitée : elle ne mesure pas la qualité rédactionnelle et doit être complétée par une analyse humaine.
 
-Une première validation technique a déjà été réalisée sur la recherche sémantique, et le script `scripts/07_test_rag_service.py` permet une validation manuelle de la chaîne complète sur quelques questions types.
+Une validation manuelle complémentaire reste possible via `scripts/07_test_rag_service.py` (chaîne RAG complète sur quelques questions types) et `scripts/06_test_semantic_search.py` (recherche sémantique seule).
 
 ### Jeu de test annoté
 
-Un premier jeu de questions/réponses annoté a été créé et stocké dans `data/evaluation/qa_annotated.csv`. Il contient 15 questions et couvre plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité. Il intègre également un cas hors sujet lié à une demande de restaurant, qui sert à vérifier que le système refuse d’inventer une réponse hors du contexte fourni.
+Un premier jeu de questions/réponses annoté a été créé et stocké dans [`data/evaluation/qa_annotated.csv`](../data/evaluation/qa_annotated.csv). Il contient 15 questions couvrant plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.
+
+> Le jeu contient aussi un cas hors sujet lié à une demande de restaurant, afin de vérifier que le système ne force pas une réponse quand le contexte ne le permet pas.
 
 Chaque ligne du CSV contient cinq colonnes :
 
@@ -504,7 +506,14 @@ Chaque ligne du CSV contient cinq colonnes :
 - `expected_event_ids` : les identifiants d’événements OpenAgenda attendus dans les sources (peut être vide pour les cas hors sujet) ;
 - `comment` : une note interne sur l’intention de la question.
 
-Ce jeu servira ensuite à l’évaluation qualitative ou quantitative du RAG, par exemple via un calcul de rappel des `event_ids` attendus et la vérification de la présence des keywords dans la réponse générée.
+Exemples de lignes du jeu annoté :
+
+| Question | Attendu | Type de cas |
+|---|---|---|
+| Quels événements autour de l'astronomie sont disponibles ? | Retrouver l’événement d’initiation à l’astronomie à Lanton. | Requête thématique précise |
+| Peux-tu me conseiller un restaurant à Arcachon ? | Répondre prudemment que le contexte ne permet pas de recommander un restaurant. | Cas hors sujet |
+
+Ce jeu sert de base à l’évaluation automatique : le script vérifie notamment les sources attendues et la présence de mots-clés dans la réponse générée.
 
 ### Évaluation automatique
 
@@ -514,13 +523,63 @@ Le script `scripts/08_evaluate_rag.py` exécute une évaluation automatique simp
 - `event_recall` : proportion d’`event_ids` attendus retrouvés dans les sources retournées ;
 - `sources_count` : nombre de sources distinctes affichées à l’utilisateur.
 
-Un `status` parmi `ok`, `partial` et `ko` est attribué à chaque ligne via des règles simples documentées dans le code. Le cas hors sujet (question sans `expected_event_ids`) est traité à part : il est considéré comme `ok` si le système ne renvoie aucune source ou s’il indique clairement qu’il ne peut pas répondre.
+Chaque ligne reçoit un statut simple :
 
-Les résultats détaillés sont écrits dans `data/evaluation/rag_evaluation_results.csv` (une ligne par question), et un résumé agrégé (compteurs `ok` / `partial` / `ko` et moyennes des deux taux) dans `data/evaluation/rag_evaluation_summary.json`. Ces fichiers générés ne sont pas versionnés.
+| Status | Signification |
+|---|---|
+| `ok` | La réponse retrouve au moins une source attendue et suffisamment de mots-clés, ou refuse correctement un cas hors sujet. |
+| `partial` | La réponse est partiellement pertinente, mais une source attendue ou une partie des mots-clés manque. |
+| `ko` | La réponse ne retrouve ni les sources attendues ni les informations clés. |
 
-Cette évaluation automatique ne remplace pas une analyse humaine de la qualité des réponses, mais elle fournit une base reproductible pour détecter les régressions et orienter les itérations futures sur le prompt ou la recherche. La stabilité de l'évaluation est renforcée par l'usage de la graine `SEED=42` (centralisée dans `src/config.py`) passée à Mistral via `random_seed`, ce qui limite la variabilité des réponses entre deux exécutions.
+Les résultats sont versionnés pour conserver une trace de la dernière évaluation :
 
-Le notebook `notebooks/04_rag_evaluation.ipynb` accompagne ce script : il sert à visualiser le jeu de test annoté, lire les fichiers de résultats générés et analyser les cas `partial` / `ko`. Il ne relance pas les appels Mistral à l'ouverture afin de rester consultable sans clé API.
+- [`data/evaluation/rag_evaluation_results.csv`](../data/evaluation/rag_evaluation_results.csv) : résultats détaillés, une ligne par question ;
+- [`data/evaluation/rag_evaluation_summary.json`](../data/evaluation/rag_evaluation_summary.json) : résumé agrégé des métriques.
+
+Exemples de lignes de résultat :
+
+| Question | Status | keyword_match_rate | event_recall |
+|---|---|---:|---:|
+| Quels événements autour de l'astronomie sont disponibles ? | `ok` | 1.000 | 1.000 |
+| Peux-tu me conseiller un restaurant à Arcachon ? | `partial` | 1.000 | 0.000 |
+
+> Cette évaluation ne remplace pas une revue humaine, mais elle donne une base reproductible pour repérer les régressions. La génération est stabilisée avec `SEED=42` et `temperature=0.2`.
+
+Le notebook [`notebooks/04_rag_evaluation.ipynb`](../notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les cas `partial` / `ko`. Il ne relance pas les appels Mistral à l’ouverture.
+
+
+### Analyse des erreurs
+
+L’évaluation automatique a été lancée sur les 15 questions annotées. Le résumé obtenu est le suivant :
+
+```json
+{
+  "total": 15,
+  "ok": 13,
+  "partial": 2,
+  "ko": 0,
+  "average_keyword_match_rate": 0.813,
+  "average_event_recall": 0.789
+}
+```
+
+Ces résultats montrent que le système répond correctement à la majorité des questions du jeu de test. Les requêtes thématiques précises, par exemple autour de l’astronomie, des expositions, des spectacles, de la santé ou de la retraite, sont bien traitées. Aucun cas n’est classé `ko` sur cette exécution.
+
+Deux réponses sont classées `partial` :
+
+| Question | Observation | Interprétation |
+|---|---|---|
+| Je cherche une aide pour créer mon entreprise à La Teste-de-Buch. | La réponse est partiellement pertinente, mais tous les événements attendus ne sont pas retrouvés dans les sources retournées. | Le retrieval peut être limité lorsque plusieurs événements proches traitent du même sujet. |
+| Peux-tu me conseiller un restaurant à Arcachon ? | Le système répond prudemment, mais des sources sont tout de même remontées. | La détection automatique du hors sujet reste perfectible. |
+
+Ces deux cas montrent surtout les limites classiques d’un premier système RAG : retrieval incomplet sur certaines questions larges ou proches, absence de filtres métier et détection du hors sujet encore simple. La métrique `keyword_match_rate` reste également sensible aux paraphrases, car elle repose sur une recherche de mots-clés exacte dans la réponse générée.
+
+Les améliorations réalistes seraient :
+
+- ajouter des filtres par commune, date ou gratuité ;
+- améliorer la détection des questions hors sujet ;
+- ajouter un reranking pour mieux sélectionner les événements les plus pertinents ;
+- enrichir le jeu de test annoté avec davantage de cas.
 
 ### Validation technique actuelle
 
@@ -562,17 +621,13 @@ Cette limite est normale pour une première recherche sémantique brute, sans fi
 
 ### Évaluation cible
 
-L’évaluation complète devra s’appuyer sur le jeu de test annoté.
+L’évaluation automatique actuelle reste à étendre au-delà de ce premier jeu de 15 questions. Les pistes principales sont :
 
-Les métriques possibles sont :
-
-* taux de récupération d’un événement attendu dans le top-k ;
-* présence des mots-clés attendus dans la réponse ;
-* qualité de la réponse générée ;
-* absence d’invention ;
-* satisfaction subjective sur un petit jeu de test.
-
-Cette partie sera complétée dans une étape suivante, à partir de la chaîne RAG maintenant disponible et du fichier data/evaluation/qa_annotated.csv.
+* élargir le jeu annoté pour couvrir plus largement les intentions utilisateur ;
+* ajouter une métrique sémantique tolérante aux paraphrases (similarité par embeddings ou lemmatisation) en complément du matching sous-chaîne ;
+* mesurer la précision en plus du rappel (pour pénaliser les réponses qui remontent trop d’événements hors sujet) ;
+* intégrer une note qualitative humaine sur un sous-ensemble pour calibrer les seuils du `status` ;
+* exécuter l’évaluation en intégration continue dès qu’une couverture suffisante sera atteinte.
 
 ## 8. Recommandations et perspectives
 
@@ -608,8 +663,8 @@ Les améliorations possibles sont :
 - ajouter une recherche hybride combinant recherche vectorielle et recherche par mots-clés ;
 - ajouter un reranking des résultats avant génération ;
 - améliorer le prompt de génération ;
-- exploiter le jeu de test annoté dans un script d’évaluation ;
-- évaluer automatiquement la qualité des réponses ;
+- enrichir l’évaluation automatique (jeu de test plus grand, métriques sémantiques) ;
+- affiner la détection du hors sujet pour éviter les faux négatifs côté métrique ;
 - exposer le système via une API FastAPI complète ;
 - préparer un déploiement avec Docker.
 
@@ -649,7 +704,9 @@ Les principaux fichiers et dossiers sont :
 - `scripts/rebuild_index.py` : reconstruction complète de l’index ;
 - `scripts/06_test_semantic_search.py` : test manuel de la recherche sémantique ;
 - `scripts/07_test_rag_service.py` : test manuel de la chaîne RAG complète ;
-- `notebooks/03_faiss_indexing.ipynb` : exploration du chunking, de FAISS et de la recherche.
+- `scripts/08_evaluate_rag.py` : évaluation automatique sur le jeu de test annoté ;
+- `notebooks/03_faiss_indexing.ipynb` : exploration du chunking, de FAISS et de la recherche ;
+- `notebooks/04_rag_evaluation.ipynb` : visualisation du jeu annoté et des résultats d’évaluation.
 
 ## 10. Annexes
 
@@ -705,8 +762,7 @@ Ce résultat montre que la recherche sémantique retrouve correctement un évén
 
 Les éléments suivants devront être complétés dans les prochaines étapes :
 
-- script d’évaluation automatique du RAG ;
 - API FastAPI finalisée ;
 - endpoints documentés ;
-- évaluation quantitative et qualitative ;
+- jeu de test annoté élargi et évaluation enrichie (métrique sémantique, précision et rappel) ;
 - recommandations finales après évaluation.

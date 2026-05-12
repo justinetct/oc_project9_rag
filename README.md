@@ -11,6 +11,8 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
 
 ## Sommaire
 
+- [Documentation](#documentation)
+- [Structure du projet](#structure-du-projet)
 - [Installation](#installation)
   - [Poetry](#poetry)
   - [Variables d'environnement](#variables-denvironnement)
@@ -31,11 +33,16 @@ L'application s'appuiera notamment sur :
 - Mistral AI pour les embeddings et le modèle de langage
 - FastAPI pour l'exposition d'une API
 
-Le **rapport technique** du projet sera rédigé dans [`docs/rapport_technique.md`](docs/rapport_technique.md).
+## Documentation
 
-La documentation du pipeline OpenAgenda, du pré-processing et de la construction des documents textuels est détaillée dans [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md).
+Les documents techniques sont regroupés dans [`docs/`](docs/) :
 
-La stratégie de chunking, la préparation des embeddings et l'indexation FAISS sont présentées dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
+| Document | Contenu |
+|---|---|
+| [`docs/openagenda_exploration.md`](docs/openagenda_exploration.md) | Notes d'exploration initiale des données OpenAgenda. |
+| [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md) | Pipeline de collecte, filtrage, nettoyage et construction des documents textuels. |
+| [`docs/faiss_indexing.md`](docs/faiss_indexing.md) | Stratégie de chunking, embeddings Mistral, index FAISS et recherche sémantique. |
+| [`docs/rapport_technique.md`](docs/rapport_technique.md) | Rapport technique du POC : architecture, RAG, évaluation, limites et perspectives. |
 
 ## Structure du projet
 
@@ -47,10 +54,6 @@ oc_project9_rag/
 │   ├── processed/                     # Données nettoyées ou transformées
 │   └── raw/                           # Données brutes collectées depuis OpenAgenda
 ├── docs/                              # Documentation du projet
-│   ├── faiss_indexing.md              # Documentation du chunking et de la préparation FAISS
-│   ├── openagenda_exploration.md      # Notes d'exploration OpenAgenda
-│   ├── openagenda_preprocessing.md    # Documentation du pré-processing OpenAgenda
-│   └── rapport_technique.md           # Rapport technique du POC
 ├── echo_app/                          # Application principale Écho
 │   ├── api/main.py                    # Point d'entrée FastAPI
 │   ├── config.py                      # Configuration spécifique à l'application
@@ -63,8 +66,8 @@ oc_project9_rag/
 │       ├── prompts.py                 # Prompts métier du chatbot Écho
 │       └── rag_service.py             # Service RAG : recherche, contexte, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
-│   ├── 01_openagenda_exploration.ipynb
-│   ├── 02_openagenda_preprocessing.ipynb
+│   ├── 01_openagenda_exploration.ipynb   # Exploration initiale des données OpenAgenda
+│   ├── 02_openagenda_preprocessing.ipynb # Pré-processing des événements collectés
 │   ├── 03_faiss_indexing.ipynb        # Exploration du chunking avant indexation
 │   └── 04_rag_evaluation.ipynb        # Visualisation du jeu annoté et des résultats d'évaluation
 ├── pyproject.toml                     # Configuration Poetry
@@ -77,6 +80,7 @@ oc_project9_rag/
 │   ├── 05_test_mistral_embeddings.py  # Test manuel des embeddings Mistral
 │   ├── 06_test_semantic_search.py     # Test manuel de la recherche sémantique
 │   ├── 07_test_rag_service.py         # Test manuel de la chaîne RAG complète
+│   ├── 08_evaluate_rag.py             # Évaluation automatique du RAG sur le jeu annoté
 │   └── rebuild_index.py               # Commande principale de reconstruction du vector store FAISS
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
@@ -191,9 +195,6 @@ Le notebook `notebooks/03_faiss_indexing.ipynb` compare plusieurs approches : sa
 > spaCy n’est pas requis pour exécuter le pipeline principal de chunking, qui utilise `src/chunking.py`.
 > La dépendance n'est donc pas installée par défaut dans le projet.
 
-
-La documentation détaillée est disponible dans [`docs/faiss_indexing.md`](docs/faiss_indexing.md).
-
 La stratégie de chunking retenue est volontairement simple :
 
 - les événements courts restent en un seul chunk ;
@@ -221,26 +222,34 @@ poetry run python scripts/06_test_semantic_search.py
 
 ## Chaîne RAG
 
-Une fois l'index FAISS construit, la classe `RagService` permet de poser une question et d'obtenir une réponse générée par Mistral à partir des événements retrouvés. Le service réutilise la recherche sémantique existante (`search_similar_events`) et ne duplique pas la logique FAISS.
+La chaîne RAG d'Écho s'appuie sur quatre étapes simples :
 
-Les prompts métier (cadrage d'Écho et format du message utilisateur) sont centralisés dans [`echo_app/rag/prompts.py`](echo_app/rag/prompts.py) afin de pouvoir être itérés indépendamment du code du service.
-
-LangChain est utilisé pour structurer les messages envoyés au modèle (via [`echo_app/rag/langchain_chain.py`](echo_app/rag/langchain_chain.py) et `ChatPromptTemplate`). La recherche FAISS reste assurée par la couche existante `echo_app/indexing` ; LangChain n'intervient que pour l'assemblage du prompt.
-
-Test manuel de la chaîne RAG complète (un appel API Mistral par question) :
-
-```bash
-poetry run python scripts/07_test_rag_service.py
+```text
+question utilisateur
+→ recherche sémantique FAISS
+→ construction du contexte et des messages LangChain
+→ génération de réponse avec Mistral
 ```
 
-Le fichier [`data/evaluation/qa_annotated.csv`](data/evaluation/qa_annotated.csv) contient un premier jeu de test annoté de 15 questions pour préparer l'évaluation du RAG.
+La logique est organisée dans `echo_app/rag/` :
 
-Un script d'évaluation automatique exécute le RAG sur ce jeu de test et compare les réponses générées aux attentes :
+- [`rag_service.py`](echo_app/rag/rag_service.py) orchestre la recherche, le contexte, l'appel Mistral et les sources ;
+- [`prompts.py`](echo_app/rag/prompts.py) centralise les prompts métier ;
+- [`langchain_chain.py`](echo_app/rag/langchain_chain.py) construit les messages envoyés au modèle.
+
+Commandes utiles :
 
 ```bash
+# Reconstruire l'index FAISS
+poetry run python scripts/rebuild_index.py
+
+# Tester manuellement la chaîne RAG complète
+poetry run python scripts/07_test_rag_service.py
+
+# Évaluer le RAG sur le jeu annoté
 poetry run python scripts/08_evaluate_rag.py
 ```
 
-Les résultats détaillés sont écrits dans `data/evaluation/rag_evaluation_results.csv` et un résumé agrégé dans `data/evaluation/rag_evaluation_summary.json` (ces fichiers générés ne sont pas versionnés).
+Le jeu de test annoté et les derniers résultats d'évaluation sont versionnés dans [`data/evaluation/`](data/evaluation/).
 
-Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu de test annoté, les résultats produits par `scripts/08_evaluate_rag.py` et les principales métriques d'évaluation, sans relancer les appels Mistral.
+Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les principales métriques d'évaluation, sans relancer les appels Mistral.
