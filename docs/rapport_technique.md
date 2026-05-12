@@ -49,7 +49,7 @@ Le périmètre du POC est volontairement limité afin de rester simple et maîtr
 
 Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
 
-À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS, la recherche sémantique et la chaîne RAG (recherche + génération Mistral) sont implémentés et testés. Les parties API finale et évaluation du RAG seront complétées dans les étapes suivantes.
+À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS, la recherche sémantique et la chaîne RAG (recherche FAISS + prompting LangChain + génération Mistral) sont implémentés et testés. Les parties API finale et évaluation du RAG seront complétées dans les étapes suivantes.
 
 ## 2. Architecture du système
 
@@ -111,6 +111,7 @@ L’intégration avec le modèle de langage est portée par la classe `RagServic
 5. l’extraction d’une liste de sources lisibles, dédoublonnée par `event_id`.
 
 Le modèle de génération utilisé est `mistral-small-latest`, configurable via la variable d’environnement `MISTRAL_MODEL`. Le client Mistral est créé uniquement au moment de générer une réponse, ce qui permet d’instancier `RagService` sans clé API en environnement de test.
+
 ### Exposition via API
 
 L’exposition via API sera réalisée avec FastAPI.
@@ -268,6 +269,10 @@ Il est configurable via la variable d’environnement `MISTRAL_MODEL`. L’appel
 ### Prompting
 
 Le prompt système et le prompt utilisateur sont versionnés dans `echo_app/rag/prompts.py` (constante `RAG_SYSTEM_PROMPT` et fonction `build_user_prompt`). Cette séparation permet de les itérer indépendamment du code du service et de garder le cadrage métier facile à relire.
+
+L'assemblage des messages `[system, user]` envoyés au modèle passe par LangChain (`ChatPromptTemplate`) dans `echo_app/rag/langchain_chain.py`. La fonction `build_langchain_messages(question, context)` injecte le prompt système et le prompt utilisateur dans le template, puis convertit les messages LangChain en simples dictionnaires `{"role", "content"}` directement compatibles avec `client.chat.complete()` du SDK Mistral.
+
+LangChain est volontairement limité ici à la construction du prompt. La recherche vectorielle reste assurée par la couche `echo_app/indexing` (et donc par `search_similar_events()`), sans passer par un VectorStore LangChain. Aucun historique conversationnel n'est ajouté à ce stade : chaque question est traitée indépendamment, ce qui garde l'orchestration simple et explicable.
 
 Le prompt envoyé à Mistral est découpé en deux messages :
 
@@ -455,7 +460,8 @@ Les tests automatisés déjà en place couvrent :
 - la construction et le chargement du vector store FAISS ;
 - la recherche sémantique avec mocks ;
 - la chaîne RAG : construction du contexte numéroté, dédoublonnage des sources, court-circuit sur résultats vides et validation des arguments, le tout sans appel réseau ;
-- les prompts métier : présence des règles essentielles dans le prompt système et format du prompt utilisateur (contexte avant question, libellés explicites).
+- les prompts métier : présence des règles essentielles dans le prompt système et format du prompt utilisateur (contexte avant question, libellés explicites) ;
+- l'assemblage LangChain : structure du résultat de `build_langchain_messages` (deux messages, rôles `system` puis `user`, format dict compatible Mistral, contenus correctement injectés).
 
 Les cas d’erreur déjà testés incluent notamment :
 
@@ -601,6 +607,7 @@ Les principaux fichiers et dossiers sont :
 - `echo_app/indexing/search.py` : recherche sémantique dans FAISS ;
 - `echo_app/rag/rag_service.py` : chaîne RAG (recherche, contexte, prompt, génération, sources) ;
 - `echo_app/rag/prompts.py` : prompts métier d’Écho (prompt système et prompt utilisateur) ;
+- `echo_app/rag/langchain_chain.py` : assemblage des messages du prompt via LangChain ;
 - `scripts/rebuild_index.py` : reconstruction complète de l’index ;
 - `scripts/06_test_semantic_search.py` : test manuel de la recherche sémantique ;
 - `scripts/07_test_rag_service.py` : test manuel de la chaîne RAG complète ;

@@ -118,8 +118,10 @@ def test_ask_returns_expected_structure(monkeypatch) -> None:
         return make_fake_results()
 
     # On remplace aussi l'appel Mistral pour éviter tout appel réseau.
-    def fake_generate_answer(self, user_prompt: str) -> str:
-        captured["user_prompt"] = user_prompt
+    # _generate_answer reçoit maintenant la liste de messages [system, user]
+    # construite via LangChain.
+    def fake_generate_answer(self, messages: list[dict]) -> str:
+        captured["messages"] = messages
         return "Réponse simulée par le mock."
 
     # monkeypatch applique ces remplacements uniquement pendant ce test.
@@ -143,8 +145,14 @@ def test_ask_returns_expected_structure(monkeypatch) -> None:
     assert len(response["sources"]) == 2
     assert response["sources"][0]["title"] == "Initiation à l'astronomie"
     assert captured["top_k"] == 3
-    assert "Contexte (extraits d'événements)" in captured["user_prompt"]
-    assert "Quels événements d'astronomie ?" in captured["user_prompt"]
+
+    # Les messages produits par LangChain doivent contenir le contexte et
+    # la question dans le message utilisateur.
+    messages = captured["messages"]
+    assert messages[0]["role"] == "system"
+    assert messages[1]["role"] == "user"
+    assert "Contexte (extraits d'événements)" in messages[1]["content"]
+    assert "Quels événements d'astronomie ?" in messages[1]["content"]
 
 
 def test_ask_short_circuits_when_no_results(monkeypatch) -> None:
@@ -155,7 +163,7 @@ def test_ask_short_circuits_when_no_results(monkeypatch) -> None:
         return []
 
     # Garde-fou : si le LLM est appelé malgré l'absence de résultat, le test échoue.
-    def fail_if_called(self, user_prompt: str) -> str:
+    def fail_if_called(self, messages: list[dict]) -> str:
         raise AssertionError(
             "Le LLM ne doit pas être appelé lorsque la recherche est vide."
         )

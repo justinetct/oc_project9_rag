@@ -3,14 +3,15 @@
 Ce module orchestre la chaîne RAG :
 - recherche sémantique des chunks d'événements via search_similar_events() ;
 - construction d'un contexte numéroté à partir des chunks retrouvés ;
-- construction d'un prompt utilisateur contrôlé ;
+- construction des messages du prompt via LangChain ;
 - appel au modèle Mistral pour générer la réponse ;
 - extraction des sources affichables, dédoublonnées par event_id.
 
 La recherche FAISS n'est jamais réimplémentée ici : RagService réutilise la
 fonction search_similar_events() existante dans echo_app.indexing.search.
 
-Les prompts métier sont centralisés dans echo_app.rag.prompts.
+Les prompts métier sont centralisés dans echo_app.rag.prompts, et leur
+assemblage en messages [system, user] passe par echo_app.rag.langchain_chain.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from __future__ import annotations
 from echo_app.config import MISTRAL_MODEL
 from echo_app.indexing.embeddings import get_mistral_client
 from echo_app.indexing.search import search_similar_events
-from echo_app.rag.prompts import RAG_SYSTEM_PROMPT, build_user_prompt
+from echo_app.rag.langchain_chain import build_langchain_messages
 
 
 DEFAULT_TOP_K = 5
@@ -99,8 +100,8 @@ class RagService:
             }
 
         context = build_context(results)
-        user_prompt = build_user_prompt(question, context)
-        answer = self._generate_answer(user_prompt)
+        messages = build_langchain_messages(question=question, context=context)
+        answer = self._generate_answer(messages)
 
         return {
             "question": question,
@@ -108,8 +109,8 @@ class RagService:
             "sources": extract_sources(results),
         }
 
-    def _generate_answer(self, user_prompt: str) -> str:
-        """Appelle Mistral pour générer la réponse à partir du prompt utilisateur.
+    def _generate_answer(self, messages: list[dict]) -> str:
+        """Appelle Mistral pour générer la réponse à partir des messages.
 
         Le client Mistral est créé uniquement au moment de générer la réponse,
         ce qui permet d'instancier RagService dans les tests sans clé API.
@@ -117,10 +118,7 @@ class RagService:
         client = get_mistral_client()
         response = client.chat.complete(
             model=self.model,
-            messages=[
-                {"role": "system", "content": RAG_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=messages,
             temperature=DEFAULT_TEMPERATURE,
         )
         return response.choices[0].message.content or ""

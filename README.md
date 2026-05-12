@@ -58,7 +58,9 @@ oc_project9_rag/
 │   │   ├── embeddings.py              # Génération des embeddings Mistral
 │   │   ├── faiss_store.py             # Construction et sauvegarde du vector store FAISS
 │   │   └── search.py                  # Recherche sémantique sur l'index FAISS
-│   └── rag/                           # Logique RAG : recherche, prompt et génération
+│   └── rag/                           # Logique RAG : recherche, prompts et génération
+│       ├── langchain_chain.py         # Assemblage des messages avec LangChain
+│       ├── prompts.py                 # Prompts métier du chatbot Écho
 │       └── rag_service.py             # Service RAG : recherche, contexte, prompt et génération
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
 │   ├── 01_openagenda_exploration.ipynb
@@ -139,7 +141,9 @@ Les tests couvrent actuellement :
 - la construction des documents textuels RAG ;
 - le chunking des documents avant indexation ;
 - la génération d'embeddings Mistral avec des tests mockés, sans appel réseau ;
-- la chaîne RAG avec recherche, construction du prompt et génération mockée.
+- les prompts métier du chatbot Écho ;
+- l'assemblage des messages LangChain sans appel réseau ;
+- la chaîne RAG avec recherche, construction du contexte et génération mockée.
 
 ## Pipeline OpenAgenda
 
@@ -217,6 +221,8 @@ poetry run python scripts/06_test_semantic_search.py
 Une fois l'index FAISS construit, la classe `RagService` permet de poser une question et d'obtenir une réponse générée par Mistral à partir des événements retrouvés. Le service réutilise la recherche sémantique existante (`search_similar_events`) et ne duplique pas la logique FAISS.
 
 Les prompts métier (cadrage d'Écho et format du message utilisateur) sont centralisés dans [`echo_app/rag/prompts.py`](echo_app/rag/prompts.py) afin de pouvoir être itérés indépendamment du code du service.
+
+LangChain est utilisé pour structurer les messages envoyés au modèle (via [`echo_app/rag/langchain_chain.py`](echo_app/rag/langchain_chain.py) et `ChatPromptTemplate`). La recherche FAISS reste assurée par la couche existante `echo_app/indexing` ; LangChain n'intervient que pour l'assemblage du prompt.
 
 Test manuel de la chaîne RAG complète (un appel API Mistral par question) :
 
