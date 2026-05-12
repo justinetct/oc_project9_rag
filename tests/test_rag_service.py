@@ -92,13 +92,17 @@ def test_extract_sources_deduplicates_by_event_id() -> None:
     sources = rag_service.extract_sources(make_fake_results())
 
     assert len(sources) == 2
+    assert sources[0]["event_id"] == "evt-1"
     assert sources[0] == {
+        "event_id": "evt-1",
         "title": "Initiation à l'astronomie",
         "city": "Lanton",
         "start_date": "2026-01-05T19:30",
         "url": "https://example.com/evt-1",
     }
+    assert sources[1]["event_id"] == "evt-2"
     assert sources[1] == {
+        "event_id": "evt-2",
         "title": "Concert acoustique",
         "city": "Andernos-les-Bains",
         "start_date": "2026-06-10T20:00",
@@ -144,6 +148,7 @@ def test_ask_returns_expected_structure(monkeypatch) -> None:
     assert isinstance(response["sources"], list)
     assert len(response["sources"]) == 2
     assert response["sources"][0]["title"] == "Initiation à l'astronomie"
+    assert response["sources"][0]["event_id"] == "evt-1"
     assert captured["top_k"] == 3
 
     # Les messages produits par LangChain doivent contenir le contexte et

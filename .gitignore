@@ -38,6 +38,11 @@ data/evaluation/*
 !data/processed/.gitkeep
 !data/evaluation/.gitkeep
 
+# Fichiers d'évaluation versionnés (jeu annoté et résultats du script 08_evaluate_rag.py)
+!data/evaluation/qa_annotated.csv
+!data/evaluation/rag_evaluation_results.csv
+!data/evaluation/rag_evaluation_summary.json
+
 # Vector store files
 vector_store/*
 !vector_store/.gitkeep

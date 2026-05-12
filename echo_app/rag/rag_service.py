@@ -20,6 +20,7 @@ from echo_app.config import MISTRAL_MODEL
 from echo_app.indexing.embeddings import get_mistral_client
 from echo_app.indexing.search import search_similar_events
 from echo_app.rag.langchain_chain import build_langchain_messages
+from src.config import SEED
 
 
 DEFAULT_TOP_K = 5
@@ -67,6 +68,7 @@ def extract_sources(results: list[dict]) -> list[dict]:
         metadata = result.get("metadata") or {}
         sources.append(
             {
+                "event_id": result.get("event_id"),
                 "title": metadata.get("title"),
                 "city": metadata.get("city"),
                 "start_date": metadata.get("start_date"),
@@ -120,5 +122,6 @@ class RagService:
             model=self.model,
             messages=messages,
             temperature=DEFAULT_TEMPERATURE,
+            random_seed=SEED,
         )
         return response.choices[0].message.content or ""

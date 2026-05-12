@@ -506,6 +506,22 @@ Chaque ligne du CSV contient cinq colonnes :
 
 Ce jeu servira ensuite à l’évaluation qualitative ou quantitative du RAG, par exemple via un calcul de rappel des `event_ids` attendus et la vérification de la présence des keywords dans la réponse générée.
 
+### Évaluation automatique
+
+Le script `scripts/08_evaluate_rag.py` exécute une évaluation automatique simple sur l’ensemble du jeu annoté. Pour chaque question, il appelle `RagService.ask()` puis calcule trois métriques :
+
+- `keyword_match_rate` : proportion de mots-clés attendus retrouvés dans la réponse générée (comparaison lowercase, sous-chaîne) ;
+- `event_recall` : proportion d’`event_ids` attendus retrouvés dans les sources retournées ;
+- `sources_count` : nombre de sources distinctes affichées à l’utilisateur.
+
+Un `status` parmi `ok`, `partial` et `ko` est attribué à chaque ligne via des règles simples documentées dans le code. Le cas hors sujet (question sans `expected_event_ids`) est traité à part : il est considéré comme `ok` si le système ne renvoie aucune source ou s’il indique clairement qu’il ne peut pas répondre.
+
+Les résultats détaillés sont écrits dans `data/evaluation/rag_evaluation_results.csv` (une ligne par question), et un résumé agrégé (compteurs `ok` / `partial` / `ko` et moyennes des deux taux) dans `data/evaluation/rag_evaluation_summary.json`. Ces fichiers générés ne sont pas versionnés.
+
+Cette évaluation automatique ne remplace pas une analyse humaine de la qualité des réponses, mais elle fournit une base reproductible pour détecter les régressions et orienter les itérations futures sur le prompt ou la recherche. La stabilité de l'évaluation est renforcée par l'usage de la graine `SEED=42` (centralisée dans `src/config.py`) passée à Mistral via `random_seed`, ce qui limite la variabilité des réponses entre deux exécutions.
+
+Le notebook `notebooks/04_rag_evaluation.ipynb` accompagne ce script : il sert à visualiser le jeu de test annoté, lire les fichiers de résultats générés et analyser les cas `partial` / `ko`. Il ne relance pas les appels Mistral à l'ouverture afin de rester consultable sans clé API.
+
 ### Validation technique actuelle
 
 La recherche sémantique peut être vérifiée manuellement avec le script suivant :

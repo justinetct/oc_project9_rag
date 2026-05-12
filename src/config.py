@@ -139,6 +139,7 @@ class Paths:
     data: Path
     data_raw: Path
     data_processed: Path
+    data_evaluation: Path
     docs: Path
     notebooks: Path
     scripts: Path
@@ -158,6 +159,7 @@ def get_paths() -> Paths:
         data=data_dir,
         data_raw=data_dir / "raw",
         data_processed=data_dir / "processed",
+        data_evaluation=data_dir / "evaluation",
         docs=root / "docs",
         notebooks=root / "notebooks",
         scripts=root / "scripts",

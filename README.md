@@ -65,7 +65,8 @@ oc_project9_rag/
 ├── notebooks/                         # Notebooks d'exploration et d'analyse
 │   ├── 01_openagenda_exploration.ipynb
 │   ├── 02_openagenda_preprocessing.ipynb
-│   └── 03_faiss_indexing.ipynb        # Exploration du chunking avant indexation
+│   ├── 03_faiss_indexing.ipynb        # Exploration du chunking avant indexation
+│   └── 04_rag_evaluation.ipynb        # Visualisation du jeu annoté et des résultats d'évaluation
 ├── pyproject.toml                     # Configuration Poetry
 ├── README.md
 ├── scripts/                           # Scripts exécutables ponctuels
@@ -144,7 +145,8 @@ Les tests couvrent actuellement :
 - les prompts métier du chatbot Écho ;
 - l'assemblage des messages LangChain sans appel réseau ;
 - la chaîne RAG avec recherche, construction du contexte et génération mockée ;
-- la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`).
+- la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`) ;
+- les fonctions de calcul de l'évaluation RAG (scoring, agrégation), sans appel réseau.
 
 ## Pipeline OpenAgenda
 
@@ -232,3 +234,13 @@ poetry run python scripts/07_test_rag_service.py
 ```
 
 Le fichier [`data/evaluation/qa_annotated.csv`](data/evaluation/qa_annotated.csv) contient un premier jeu de test annoté de 15 questions pour préparer l'évaluation du RAG.
+
+Un script d'évaluation automatique exécute le RAG sur ce jeu de test et compare les réponses générées aux attentes :
+
+```bash
+poetry run python scripts/08_evaluate_rag.py
+```
+
+Les résultats détaillés sont écrits dans `data/evaluation/rag_evaluation_results.csv` et un résumé agrégé dans `data/evaluation/rag_evaluation_summary.json` (ces fichiers générés ne sont pas versionnés).
+
+Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu de test annoté, les résultats produits par `scripts/08_evaluate_rag.py` et les principales métriques d'évaluation, sans relancer les appels Mistral.

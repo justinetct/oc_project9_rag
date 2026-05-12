@@ -12,10 +12,10 @@ import pandas as pd
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from src.config import PATHS  # noqa: E402
 
-QA_CSV_PATH = (
-    Path(__file__).resolve().parents[1] / "data" / "evaluation" / "qa_annotated.csv"
-)
+
+QA_CSV_PATH = PATHS.data_evaluation / "qa_annotated.csv"
 
 EXPECTED_COLUMNS = {
     "question",

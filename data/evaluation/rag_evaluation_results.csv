@@ -1,0 +1,99 @@
+question,expected_answer,generated_answer,expected_keywords,matched_keywords,keyword_match_rate,expected_event_ids,matched_event_ids,event_recall,sources_count,status,comment
+Quels événements autour de l'astronomie sont disponibles ?,"Le système doit proposer l'Initiation à l'astronomie à Lanton, avec observation aux instruments et découverte du ciel nocturne.","D'après le contexte fourni, il y a un événement autour de l'astronomie :
+
+**Initiation à l'astronomie à Lanton** — Lanton
+- **Date** : 5 janvier 2026 à 19h30
+- **Lieu** : Blagon, Lanton
+- **Tarifs** : 10 € pour les moins de 18 ans, 20 € pour les adultes
+- **Durée** : 2h30
+- **Organisateur** : EcoNature
+
+Une soirée d'observation du ciel nocturne avec initiation aux télescopes et aux constellations.",astronomie;Lanton;observation;téléscope;nature,astronomie;Lanton;observation;nature,0.8,13708573,13708573,1.0,3,ok,Requête thématique précise avec un seul événement attendu.
+Je cherche une exposition autour de la nature ou des plantes.,"Le système doit identifier l'exposition Ex(s)istere à Audenge, consacrée au végétal sauvage et à 14 plantes, au Domaine de Certes.","Voici deux expositions autour de la nature et des plantes dans le Bassin d'Arcachon :
+
+1. **Ex(s)istere, une ode au végétal sauvage** à Audenge (Domaine de Certes) — Une exposition artistique et scientifique sur 14 plantes sauvages, avec des panneaux illustrés et des textes poétiques. **Gratuit**, du 7 au 27 mai 2026, tous les jours de 10h à 13h et de 14h à 18h.
+
+2. **Plantes de sable et de vent : la flore sauvage de la Dune du Pilat** à La Teste-de-Buch — Une balade guidée pour découvrir les plantes adaptées aux conditions extrêmes de la dune. **Gratuit**, sur inscription, le 23 mai 2026 de 10h à 12h.",exposition;nature;plantes;végétal sauvage;Audenge;Domaine de Certes,exposition;nature;plantes;végétal sauvage;Audenge;Domaine de Certes,1.0,95865579,95865579,1.0,3,ok,Requête exposition / nature.
+Y a-t-il une sortie botanique ou flore sur le Bassin d'Arcachon ?,"Le système peut proposer la sortie sur les lichens au Domaine de Certes et Graveyron à Audenge, ou la balade sur la flore sauvage de la Dune du Pilat à La Teste-de-Buch.","Oui, il y a plusieurs sorties botaniques ou liées à la flore sur le Bassin d'Arcachon :
+
+1. **""Plantes de sable et de vent : la flore sauvage de la Dune du Pilat""** à La Teste-de-Buch (23 mai 2026, 10h-12h) – Balade guidée pour découvrir la flore adaptée au sable et au vent.
+2. **""Sortie : à la découverte des lichens du domaine de Certes et Graveyron""** à Audenge (23 mai 2026, 10h-12h30) – Découverte des lichens et de la biodiversité locale.
+
+Les deux sont gratuites, mais nécessitent une inscription.",botanique;flore;lichens;Dune du Pilat;Audenge;La Teste-de-Buch,botanique;flore;lichens;Dune du Pilat;Audenge;La Teste-de-Buch,1.0,70763679;21549771,70763679;21549771,1.0,3,ok,Requête thématique avec plusieurs événements attendus.
+Je cherche une activité à faire en famille autour du vélo.,"Le système doit proposer des événements vélo adaptés au grand public, par exemple Tous en selle à Arès ou Mai à vélo Sud Bassin au Teich.","Voici deux événements autour du vélo qui pourraient vous intéresser en famille :
+
+1. **Mai à vélo Sud Bassin** à Le Teich (30 mai 2026) :
+   Une journée festive avec des animations pour tous les âges : balade accessible (environ 10 km), ateliers pratiques, concours de dessin pour les enfants, et des démonstrations de BMX. Il y a aussi des essais de vélos adaptés et une ambiance conviviale.
+
+2. **Tous en selle** à Arès (9 mai 2026) :
+   Une journée gratuite avec des stands, des ateliers de réparation, des balades en triporteur pour les familles et les personnes à mobilité réduite, ainsi que des courses en folies défis doux pour tous. Un vélo est même à gagner !
+
+Ces deux événements sont adaptés aux familles et mettent en avant la convivialité et la découverte du vélo.",vélo;famille;animations;Arès;Le Teich,vélo;famille;animations;Arès;Le Teich,1.0,80332762;38800197,80332762;38800197,1.0,2,ok,Requête famille / vélo.
+Quels événements vélo sont prévus en mai ?,"Le système doit retrouver plusieurs événements liés au vélo en mai, comme Mai à Vélo 2026 dans plusieurs communes, Café de la Mobilité à Biganos, Tous en selle à Arès ou Mai à vélo Sud Bassin au Teich.","En mai, plusieurs événements vélo sont prévus autour du Bassin d'Arcachon :
+
+1. **Mai à vélo Sud Bassin** à Le Teich :
+   - **Samedi 16 mai** : *La Grande Boucle Sud Bassin* (44 km, départ depuis la Halle du Teich).
+   - **Samedi 30 mai** : *Festivélo* à la Halle du Teich (animations, concerts, ateliers, restauration, etc.).
+
+2. **Mai à Vélo 2026** à Mios :
+   - Du **30 avril au 31 mai** : défi communautaire pour parcourir un maximum de kilomètres à vélo.
+
+Ces événements sont axés sur la mobilité durable, la convivialité et l'inclusion. 🚴‍♂️",vélo;mai;Mios;Andernos-les-Bains;La Teste-de-Buch;Biganos;Arès;Le Teich,vélo;mai;Mios;Le Teich,0.5,10772673;49861420;97562973,10772673,0.333,2,ok,Requête large avec plusieurs événements similaires.
+Que peut-on faire à Arès ?,"Le système doit proposer les événements localisés à Arès, notamment Tous en selle, Symphonie pour klaxons et essuie-glaces ou Crossing - Studio 8 selon les résultats retrouvés.","À Arès, voici quelques idées d'événements à ne pas manquer :
+
+- **Tous en selle** (9 mai 2026) : Une journée dédiée à la mobilité douce avec des balades à vélo, des stands, des ateliers, des courses en folies défis, et même un vélo à gagner. L'événement se déroule à la Gare d’Arès, rue Jean Templier, de 10h à 22h.
+
+- **Crossing - Studio 8** (8 octobre 2026) : Une performance artistique à l’Espace Brémontier, organisée dans le cadre de la Saison Méditerranée 2026.
+
+- **Symphonie pour klaxons et essuie-glaces** (26 juin 2026) : Un spectacle décalé et humoristique dans l’espace public, interrogeant l’art et la musique à travers des détournements sonores.",Arès;Tous en selle;spectacle;vélo;théâtre,Arès;Tous en selle;spectacle;vélo,0.8,80332762;5335717;53614677,80332762;5335717;53614677,1.0,3,ok,Requête par commune.
+Je cherche un spectacle ou une balade artistique à Biganos.,"Le système doit proposer Je me laisse porter - Saison 6 à Biganos, une balade avec des parenthèses artistiques mêlant plusieurs disciplines.","Voici deux événements à Biganos qui pourraient vous intéresser :
+
+1. **""Je me laisse porter - Saison 6""** (10 mai 2026) : Une balade artistique mêlant théâtre, danse, cirque, musique (oud, kamele ngoni, voix) et arts de la rue, avec des départs toutes les 15 minutes au Centre Culturel de Biganos.
+
+2. **""Café de la Mobilité: mon Bassin à vélo !""** (5 mai 2026) : Une rencontre pour découvrir les pistes cyclables du Bassin et échanger sur la mobilité à vélo (gratuit, sur inscription).
+
+Si vous souhaitez une expérience immersive et artistique, la balade **""Je me laisse porter""** est idéale !",Biganos;spectacle;balade artistique;théâtre;danse;cirque;musique,Biganos;balade artistique;théâtre;danse;cirque;musique,0.857,31322983,31322983,1.0,4,ok,Requête spectacle / commune.
+Y a-t-il un spectacle avec théâtre ou humour à Arès ?,"Le système doit proposer Symphonie pour klaxons et essuie-glaces à Arès, un spectacle mêlant théâtre, humour et musique.","Oui ! À Arès, tu peux assister à :
+- **""Symphonie pour klaxons et essuie-glaces""** (théâtre, humour, musique) le **26 juin 2026** en espace public.
+
+Si tu cherches d'autres options, je n'ai pas trouvé d'autres spectacles avec théâtre ou humour à Arès dans le contexte fourni. 😊",Arès;théâtre;humour;musique;spectacle,Arès;théâtre;humour;musique;spectacle,1.0,5335717,5335717,1.0,4,ok,Requête spectacle précise.
+Quels événements concernent le patrimoine en septembre ?,"Le système doit proposer les événements des Journées européennes du patrimoine, comme Trésors fragiles de Salles ou Dans les pas de Cazenave... ou presque ! à Belin-Béliet.","Les événements concernant le patrimoine en septembre sont :
+
+- **""Trésors fragiles de Salles""** à Salles (19 septembre 2026) : une conférence suivie d'une visite guidée gratuite sur la préservation du patrimoine local.
+- **""Dans les pas de Cazenave... ou presque !""** à Belin-Béliet (19-20 septembre 2026) : une balade guidée sur l'histoire industrielle de la cité Cazenave.",patrimoine;septembre;Salles;Belin-Béliet;Journées européennes du patrimoine,patrimoine;septembre;Salles;Belin-Béliet,0.8,86073148;23079313,86073148;23079313,1.0,3,ok,Requête date / patrimoine.
+Je cherche une information santé ou accès aux droits à Andernos.,Le système doit proposer l'événement Information CPAM - Accès aux droits et la prévention santé à Andernos-les-Bains.,"Voici les événements disponibles à Andernos-les-Bains sur le thème de la santé ou de l'accès aux droits :
+
+1. **""Information CPAM - Accès aux droits et la prévention santé""** (Andernos-les-Bains)
+   - **Prochaine date** : 8 décembre 2026, de 9h à 11h30
+   - **Lieu** : Agence ANDERNOS, 33510 Andernos-les-Bains
+   *(Organisé par la CPAM pour informer sur vos droits en santé et la prévention.)*
+
+2. **""La contrainte de santé dans les démarches""** (Andernos-les-Bains)
+   - **Prochaine date** : 18 mai 2026, de 12h à 14h
+   - **Lieu** : Agence ANDERNOS, 33510 Andernos-les-Bains
+   *(Réunion sur la reconnaissance des contraintes de santé et les aides possibles.)*
+
+Ces deux événements ont lieu **sur place** et sont gratuits. Souhaitez-vous plus de détails sur l’un d’eux ?",santé;CPAM;droits;prévention;Andernos-les-Bains,santé;CPAM;droits;prévention;Andernos-les-Bains,1.0,48414835,48414835,1.0,5,ok,Requête santé / droits.
+Existe-t-il des événements pour préparer ma retraite ?,"Le système doit proposer l'information collective Préparez sereinement votre retraite, animée par la Carsat à Andernos-les-Bains.","Oui, il existe un événement dédié à la préparation de la retraite :
+**""Préparez sereinement votre retraite : Tout savoir sur vos droits et démarches avec la Carsat""** à **Andernos-les-Bains** le **2 septembre 2026** de 7h à 10h.
+
+C'est une information collective animée par un intervenant de la Carsat pour vous éclairer sur vos droits, démarches et calculs de pension.",retraite;Carsat;information collective;Andernos-les-Bains,retraite;Carsat;information collective;Andernos-les-Bains,1.0,73676492,73676492,1.0,5,ok,Requête administrative précise.
+Je cherche une aide pour créer mon entreprise à La Teste-de-Buch.,"Le système doit proposer les événements liés à la création d'entreprise à La Teste-de-Buch, comme l'accompagnement EGEE, les rendez-vous ADIE ou l'atelier CANVAS.","Je peux vous aider ! L'association **EGEE** propose des **échanges et accompagnements** pour la création d'entreprise à **La Teste-de-Buch**. Plusieurs créneaux sont disponibles :
+- **22 mai 2026** (7h-7h30, 8h-8h30, 8h30-9h)
+- **1er juillet 2026** (8h30-9h, 9h-9h30)
+
+Ces rendez-vous se déroulent **sur place** à l'agence LA TESTE (33260 La Teste-de-Buch). Pour plus de détails, consultez l'événement *""Echanges et Accompagnement par la structure EGEE""* à La Teste-de-Buch.",création d'entreprise;La Teste-de-Buch;EGEE;ADIE;CANVAS;emploi,création d'entreprise;La Teste-de-Buch;EGEE,0.5,71142225;29993164;1286512,,0.0,5,partial,Requête emploi / création d'entreprise.
+Je cherche un événement autour de la mobilité ou du permis de conduire.,"Le système doit proposer les événements de mobilité, comme Point Information Mobilité à Andernos-les-Bains ou Café de la Mobilité Objectif Permis B à Biganos.","Voici les événements en lien avec la mobilité ou le permis de conduire disponibles dans le contexte fourni :
+
+1. **Café de la Mobilité: Objectif Permis B !** — Biganos (le 2 juin 2026)
+   *Un atelier pour s'informer sur l'apprentissage, les inscriptions et les financements du permis B, avec un accueil café à 9h30.*
+
+2. **Rendez-vous Point Information Mobilité** — La Teste-de-Buch (les 22 mai et 5 juin 2026)
+   *Un temps d'échange sur les transports en commun, la location de véhicules, le covoiturage, et des conseils sur le permis B.*
+
+3. **Point Information Mobilité** — Andernos-les-Bains (le 1er juin 2026)
+   *Un rendez-vous pour découvrir les solutions de mobilité (transports, autopartage, etc.) et obtenir des informations sur le permis B.*
+
+Tu peux participer à ces événements **sur place** et **gratuitement**. Si tu veux plus de détails sur l'un d'eux, n'hésite pas à demander !",mobilité;permis B;Biganos;Andernos-les-Bains;déplacement,mobilité;permis B;Biganos;Andernos-les-Bains,0.8,86620406;38852602,38852602,0.5,5,ok,Requête mobilité.
+Est-ce que l'exposition Ex(s)istere est gratuite ?,Le système doit répondre que l'exposition Ex(s)istere à Audenge est indiquée comme gratuite si cet élément est retrouvé dans le contexte.,"Oui, l'exposition **Ex(s)istere, une ode au végétal sauvage** à Audenge est **gratuite**. Elle est proposée par le Conservatoire botanique national Sud-Atlantique en partenariat avec le Département de la Gironde.",gratuit;Ex(s)istere;Audenge;exposition;Domaine de Certes,gratuit;Ex(s)istere;Audenge;exposition,0.8,95865579,95865579,1.0,4,ok,Question précise avec information de gratuité présente dans le corpus.
+Peux-tu me conseiller un restaurant à Arcachon ?,Le système doit répondre prudemment que le contexte contient des événements culturels et ne permet pas de recommander un restaurant.,"Je ne peux répondre que sur les événements culturels présents dans le contexte fourni. Si vous cherchez un restaurant à Arcachon, je vous conseille de consulter des plateformes spécialisées comme Google Maps, TripAdvisor ou les guides locaux.",restaurant;hors sujet;contexte insuffisant,restaurant,0.333,,,0.0,4,partial,Cas hors sujet : le système doit refuser d'inventer.

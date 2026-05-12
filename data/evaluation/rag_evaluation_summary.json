@@ -1,0 +1,8 @@
+{
+  "total": 15,
+  "ok": 13,
+  "partial": 2,
+  "ko": 0,
+  "average_keyword_match_rate": 0.813,
+  "average_event_recall": 0.789
+}
