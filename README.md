@@ -145,7 +145,7 @@ poetry run python -m compileall src echo_app scripts
 Le coverage peut être recalculé avec :
 
 ```bash
-poetry run pytest --cov=src --cov=echo_app --cov=scripts --cov-report=term-missing
+poetry run pytest --cov=echo_app --cov-report=term-missing
 ```
 
 Résultat :
