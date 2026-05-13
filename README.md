@@ -22,6 +22,7 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
 - [Pipeline OpenAgenda](#pipeline-openagenda)
 - [Préparation des documents pour l'indexation](#préparation-des-documents-pour-lindexation)
 - [Chaîne RAG](#chaîne-rag)
+- [API FastAPI](#api-fastapi)
 
 ## Stack technique
 
@@ -56,7 +57,9 @@ oc_project9_rag/
 │   └── raw/                           # Données brutes collectées depuis OpenAgenda
 ├── docs/                              # Documentation du projet
 ├── echo_app/                          # Application principale Écho
-│   ├── api/main.py                    # Point d'entrée FastAPI
+│   ├── api/                           # API FastAPI
+│   │   ├── main.py                    # Point d'entrée FastAPI et endpoints HTTP
+│   │   └── schemas.py                 # Schémas Pydantic de l'API
 │   ├── config.py                      # Configuration spécifique à l'application
 │   ├── indexing/                      # Création et mise à jour de l'index vectoriel
 │   │   ├── embeddings.py              # Génération des embeddings Mistral
@@ -151,14 +154,15 @@ poetry run pytest --cov=echo_app --cov-report=term-missing
 Résultat :
 
 ```bash
-=================================================================================== tests coverage ===================================================================================
-_________________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 __________________________________________________________________
+================================================================================ tests coverage ================================================================================
+______________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 _______________________________________________________________
 
 Name                                         Stmts   Miss  Cover   Missing
 --------------------------------------------------------------------------
 echo_app/__init__.py                             0      0   100%
 echo_app/api/__init__.py                         0      0   100%
-echo_app/api/main.py                             0      0   100%
+echo_app/api/main.py                            20      0   100%
+echo_app/api/schemas.py                         18      0   100%
 echo_app/config.py                               7      1    86%   19
 echo_app/indexing/__init__.py                    6      0   100%
 echo_app/indexing/embeddings.py                 62      5    92%   53, 70, 82, 93, 105
@@ -171,29 +175,31 @@ echo_app/rag/langchain_chain.py                 12      0   100%
 echo_app/rag/prompts.py                          4      0   100%
 echo_app/rag/rag_service.py                     66      7    89%   49, 115-117, 153-160
 --------------------------------------------------------------------------
-TOTAL                                          296     24    92%
-================================================================================ 107 passed in 0.99s =================================================================================
+TOTAL                                          334     24    93%
+============================================================================= 117 passed in 1.01s ==============================================================================
 ```
 
 Structure des tests automatisés :
 
 ```text
 tests/
+├── test_api.py                   # Endpoints FastAPI, validation et erreurs sans appel réseau
 ├── test_chunking.py              # Découpage des documents en chunks
 ├── test_documents.py             # Construction des documents textuels RAG
 ├── test_embeddings.py            # Embeddings Mistral avec appels mockés
+├── test_evaluation_dataset.py    # Structure du jeu annoté d'évaluation
 ├── test_faiss_store.py           # Ancien store FAISS bas niveau, conservé pour compatibilité
+├── test_imports.py               # Imports principaux du projet
+├── test_io.py                    # Fonctions simples d'entrée / sortie
 ├── test_langchain_chain.py       # Construction des messages avec ChatPromptTemplate
 ├── test_langchain_embeddings.py  # Adaptateur Mistral compatible LangChain
 ├── test_langchain_faiss_store.py # Vector store FAISS LangChain : build, save, load, retriever
-├── test_openagenda.py            # Client OpenAgenda et paramètres de collecte
 ├── test_preprocessing.py         # Filtrage, nettoyage et normalisation des événements
-├── test_prompts.py               # Prompts métier du chatbot Écho
 ├── test_rag_evaluation.py        # Fonctions de scoring et agrégation de l'évaluation RAG
+├── test_rag_prompts.py           # Prompts métier du chatbot Écho
 ├── test_rag_service.py           # Service RAG avec retrieval et génération mockés
 ├── test_rebuild_index.py         # Reconstruction du vector store FAISS LangChain
-├── test_search.py                # Recherche sémantique via FAISS LangChain
-└── test_smoke.py                 # Tests simples d'import et de configuration
+└── test_search.py                # Recherche sémantique via FAISS LangChain
 ```
 
 Les tests couvrent :
@@ -210,6 +216,7 @@ Les tests couvrent :
 - la chaîne RAG avec recherche, construction du contexte et génération mockée ;
 - la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`) ;
 - les fonctions de calcul de l'évaluation RAG (scoring, agrégation), sans appel réseau.
+- l'API FastAPI (`/health`, `/ask`, validation et erreurs) sans appel réseau ;
 
 ## Pipeline OpenAgenda
 
@@ -315,3 +322,38 @@ poetry run python scripts/08_evaluate_rag.py
 Le jeu de test annoté et les derniers résultats d'évaluation sont versionnés dans [`data/evaluation/`](data/evaluation/).
 
 Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les principales métriques d'évaluation, sans relancer les appels Mistral.
+
+## API FastAPI
+
+Une API FastAPI expose le service RAG via HTTP. Elle ne réimplémente aucune logique : l'endpoint `/ask` appelle directement `RagService.ask()` et retourne sa réponse en JSON.
+
+Pas d'authentification, pas de streaming, pas de mémoire conversationnelle — l'objectif est de fournir un endpoint simple pour démonstration et intégration.
+
+### Lancement local
+
+```bash
+poetry run uvicorn echo_app.api.main:app --reload
+```
+
+### Endpoints
+
+- `GET /health` → `{"status": "ok", "service": "echo-rag-api"}`
+- `POST /ask` — corps `{"question": "..."}` → `{"question", "answer", "sources": [...]}`
+
+### Exemples curl
+
+```bash
+curl http://127.0.0.1:8000/health
+
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Quels événements autour de l astronomie sont proposés ?"}'
+```
+
+Documentation interactive Swagger : <http://127.0.0.1:8000/docs>.
+
+Codes d'erreur :
+
+- `422` : champ `question` manquant ou JSON invalide ;
+- `400` : `question` vide ou composée uniquement d'espaces ;
+- `500` : erreur inattendue côté service RAG.
