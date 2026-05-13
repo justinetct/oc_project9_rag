@@ -50,7 +50,39 @@ class AskResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Réponse de l'endpoint GET /health."""
+    """Réponse de l'endpoint GET /health.
+
+    Donne quelques informations utiles sur l'état du service RAG et du
+    vector store local, sans déclencher de chargement coûteux.
+    """
 
     status: str
     service: str
+    rag_service_ready: bool
+    vector_store_available: bool
+    chunks_count: int | None = None
+    top_k_default: int
+    last_rebuild_at: str | None = None
+
+
+class RebuildRequest(BaseModel):
+    """Corps de la requête POST /rebuild.
+
+    La reconstruction de l'index est une opération coûteuse : elle doit
+    être confirmée explicitement avec ``confirm=true``.
+    """
+
+    confirm: bool = Field(
+        default=False,
+        description="Doit être ``true`` pour déclencher la reconstruction.",
+        examples=[True],
+    )
+
+
+class RebuildResponse(BaseModel):
+    """Réponse de l'endpoint POST /rebuild en cas de succès."""
+
+    status: str
+    message: str
+    chunks_count: int
+    last_rebuild_at: str | None = None

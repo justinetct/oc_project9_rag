@@ -65,6 +65,7 @@ oc_project9_rag/
 │   │   ├── embeddings.py              # Génération des embeddings Mistral
 │   │   ├── langchain_embeddings.py    # Adaptateur embeddings Mistral pour LangChain
 │   │   ├── langchain_faiss_store.py   # Vector store FAISS LangChain
+│   │   ├── rebuild.py                 # Reconstruction de l'index réutilisée par CLI et API
 │   │   ├── search.py                  # Recherche sémantique via FAISS LangChain
 │   │   └── faiss_store.py             # Ancien store FAISS bas niveau conservé pour les tests
 │   └── rag/                           # Logique RAG : recherche, prompts et génération
@@ -161,22 +162,23 @@ Name                                         Stmts   Miss  Cover   Missing
 --------------------------------------------------------------------------
 echo_app/__init__.py                             0      0   100%
 echo_app/api/__init__.py                         0      0   100%
-echo_app/api/main.py                            20      0   100%
-echo_app/api/schemas.py                         18      0   100%
+echo_app/api/main.py                            54      1    98%   62
+echo_app/api/schemas.py                         30      0   100%
 echo_app/config.py                               7      1    86%   19
 echo_app/indexing/__init__.py                    6      0   100%
 echo_app/indexing/embeddings.py                 62      5    92%   53, 70, 82, 93, 105
 echo_app/indexing/faiss_store.py                63      8    87%   24, 34, 37, 41, 96, 98, 119, 121
 echo_app/indexing/langchain_embeddings.py        8      0   100%
 echo_app/indexing/langchain_faiss_store.py      47      3    94%   36, 92, 98
+echo_app/indexing/rebuild.py                    60     28    53%   42, 68-80, 95, 98-99, 109-153
 echo_app/indexing/search.py                     17      0   100%
 echo_app/rag/__init__.py                         4      0   100%
 echo_app/rag/langchain_chain.py                 12      0   100%
 echo_app/rag/prompts.py                          4      0   100%
-echo_app/rag/rag_service.py                     66      7    89%   49, 115-117, 153-160
+echo_app/rag/rag_service.py                     68      8    88%   49, 115-117, 129, 162-169
 --------------------------------------------------------------------------
-TOTAL                                          334     24    93%
-============================================================================= 117 passed in 1.01s ==============================================================================
+TOTAL                                          442     54    88%
+============================================================================= 128 passed in 1.05s ==============================================================================
 ```
 
 Structure des tests automatisés :
@@ -216,7 +218,7 @@ Les tests couvrent :
 - la chaîne RAG avec recherche, construction du contexte et génération mockée ;
 - la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`) ;
 - les fonctions de calcul de l'évaluation RAG (scoring, agrégation), sans appel réseau.
-- l'API FastAPI (`/health`, `/ask`, validation et erreurs) sans appel réseau ;
+- l'API FastAPI (`/health`, `/ask`, `/rebuild`, validation et erreurs) sans appel réseau ;
 
 ## Pipeline OpenAgenda
 
@@ -325,9 +327,7 @@ Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ip
 
 ## API FastAPI
 
-Une API FastAPI expose le service RAG via HTTP. Elle ne réimplémente aucune logique : l'endpoint `/ask` appelle directement `RagService.ask()` et retourne sa réponse en JSON.
-
-Pas d'authentification, pas de streaming, pas de mémoire conversationnelle — l'objectif est de fournir un endpoint simple pour démonstration et intégration.
+Une API FastAPI expose le service RAG via HTTP. Elle ne réimplémente aucune logique RAG : l'endpoint `/ask` appelle directement `RagService.ask()` et retourne sa réponse en JSON. L'endpoint `/rebuild` réutilise la même fonction de reconstruction que le script CLI.
 
 ### Lancement local
 
@@ -337,8 +337,25 @@ poetry run uvicorn echo_app.api.main:app --reload
 
 ### Endpoints
 
-- `GET /health` → `{"status": "ok", "service": "echo-rag-api"}`
-- `POST /ask` — corps `{"question": "..."}` → `{"question", "answer", "sources": [...]}`
+- `GET /health` → état de l'API et disponibilité du vector store
+- `POST /ask` — question/réponse RAG sourcée
+- `POST /rebuild` → reconstruction locale de l'index avec confirmation
+
+Exemple de réponse `GET /health` quand un index existe :
+
+```json
+{
+  "status": "ok",
+  "service": "echo-rag-api",
+  "rag_service_ready": true,
+  "vector_store_available": true,
+  "chunks_count": 155,
+  "top_k_default": 5,
+  "last_rebuild_at": "2026-05-13T15:42:00Z"
+}
+```
+
+Dans un environnement neuf (sans `vector_store/`), `vector_store_available` vaut `false` et `chunks_count` / `last_rebuild_at` valent `null`.
 
 ### Exemples curl
 
@@ -348,12 +365,22 @@ curl http://127.0.0.1:8000/health
 curl -X POST http://127.0.0.1:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "Quels événements autour de l astronomie sont proposés ?"}'
+
+curl -X POST http://127.0.0.1:8000/rebuild \
+  -H "Content-Type: application/json" \
+  -d '{"confirm": true}'
 ```
 
 Documentation interactive Swagger : <http://127.0.0.1:8000/docs>.
 
-Codes d'erreur :
+### Reconstruction de l'index via `/rebuild`
 
-- `422` : champ `question` manquant ou JSON invalide ;
-- `400` : `question` vide ou composée uniquement d'espaces ;
-- `500` : erreur inattendue côté service RAG.
+`POST /rebuild` réutilise la fonction `echo_app.indexing.rebuild.rebuild_index` (la même que celle appelée par `scripts/rebuild_index.py`). L'opération est synchrone et peut prendre plusieurs dizaines de secondes selon le volume de chunks. Après reconstruction, le retriever en cache du service RAG est invalidé : le prochain `POST /ask` repart automatiquement du nouvel index.
+
+Cet endpoint est pensé pour la démo locale du POC. En production réelle, il faudrait le protéger (authentification, rôle dédié) ou externaliser la reconstruction (tâche planifiée, pipeline CI).
+
+### Codes d'erreur
+
+- `422` : champ `question` manquant ou JSON invalide sur `/ask`.
+- `400` : `question` vide ou composée uniquement d'espaces ; `/rebuild` appelé sans `confirm=true`.
+- `500` : erreur inattendue côté service RAG ou pendant la reconstruction de l'index.

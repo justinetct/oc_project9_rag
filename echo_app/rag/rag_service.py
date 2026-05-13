@@ -119,6 +119,15 @@ class RagService:
             )
         return self._retriever
 
+    def reset_retriever_cache(self) -> None:
+        """Invalide le retriever en cache pour forcer un rechargement.
+
+        À appeler après une reconstruction de l'index (via l'API
+        ``POST /rebuild``) afin que le prochain ``ask()`` reconstruise un
+        retriever à partir du nouveau vector store.
+        """
+        self._retriever = None
+
     def ask(self, question: str) -> dict:
         """Répond à une question utilisateur via la chaîne RAG complète."""
         if not question or not str(question).strip():
