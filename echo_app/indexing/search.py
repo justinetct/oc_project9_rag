@@ -1,26 +1,34 @@
-"""Recherche sémantique simple basée sur l'index FAISS local."""
+"""Utilitaire de recherche sémantique sur le vector store FAISS LangChain.
+
+Ce module n'est plus utilisé par le service RAG en production (RagService
+passe par ``retriever.invoke(question)``). Il reste exposé pour les
+scripts manuels de démonstration (``scripts/06_test_semantic_search.py``)
+en s'appuyant sur le même vector store ``langchain_community.vectorstores.FAISS``.
+"""
 
 from __future__ import annotations
 
-from copy import deepcopy
-
-from echo_app.indexing.embeddings import embed_query
-from echo_app.indexing.faiss_store import load_vector_store, search_index
+from echo_app.indexing.langchain_embeddings import MistralLangChainEmbeddings
+from echo_app.indexing.langchain_faiss_store import load_langchain_vector_store
 
 
-def format_search_result(
-    chunk_metadata: dict,
-    faiss_id: int,
-    distance: float,
-) -> dict:
-    """Construit un résultat de recherche lisible à partir d'un chunk indexé."""
+_METADATA_TOP_LEVEL_KEYS = {"event_id", "chunk_id", "chunk_index", "chunk_count"}
+
+
+def _format_search_result(document, distance: float) -> dict:
+    """Reconstruit un dict compatible avec l'ancienne API à partir d'un Document."""
+    metadata = document.metadata or {}
+    nested_metadata = {
+        key: value
+        for key, value in metadata.items()
+        if key not in _METADATA_TOP_LEVEL_KEYS
+    }
     return {
-        "text": chunk_metadata.get("chunk_text"),
+        "text": document.page_content,
         "score": float(distance),
-        "metadata": deepcopy(chunk_metadata.get("metadata", {})),
-        "chunk_id": chunk_metadata.get("chunk_id"),
-        "event_id": chunk_metadata.get("event_id"),
-        "faiss_id": int(faiss_id),
+        "metadata": nested_metadata,
+        "chunk_id": metadata.get("chunk_id"),
+        "event_id": metadata.get("event_id"),
         "distance": float(distance),
     }
 
@@ -32,13 +40,8 @@ def search_similar_events(query: str, top_k: int = 5) -> list[dict]:
     if top_k <= 0:
         raise ValueError("top_k doit être strictement positif.")
 
-    index, faiss_metadata = load_vector_store()
-    query_embedding = embed_query(query)
-    distances, indices = search_index(index, query_embedding, top_k=top_k)
+    embeddings = MistralLangChainEmbeddings()
+    vectorstore = load_langchain_vector_store(embeddings)
+    hits = vectorstore.similarity_search_with_score(query, k=top_k)
 
-    results: list[dict] = []
-    for distance, faiss_id in zip(distances, indices, strict=True):
-        chunk_metadata = faiss_metadata[faiss_id]
-        results.append(format_search_result(chunk_metadata, faiss_id, distance))
-
-    return results
+    return [_format_search_result(document, distance) for document, distance in hits]

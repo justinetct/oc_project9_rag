@@ -29,7 +29,7 @@ L'application s'appuiera notamment sur :
 - Python 3.12
 - Poetry pour la gestion de l'environnement
 - LangChain pour la chaîne RAG
-- FAISS pour l'index vectoriel
+- FAISS via LangChain pour l'index vectoriel et la recherche sémantique
 - Mistral AI pour les embeddings et le modèle de langage
 - FastAPI pour l'exposition d'une API
 
@@ -59,8 +59,10 @@ oc_project9_rag/
 │   ├── config.py                      # Configuration spécifique à l'application
 │   ├── indexing/                      # Création et mise à jour de l'index vectoriel
 │   │   ├── embeddings.py              # Génération des embeddings Mistral
-│   │   ├── faiss_store.py             # Construction et sauvegarde du vector store FAISS
-│   │   └── search.py                  # Recherche sémantique sur l'index FAISS
+│   │   ├── langchain_embeddings.py    # Adaptateur embeddings Mistral pour LangChain
+│   │   ├── langchain_faiss_store.py   # Vector store FAISS LangChain
+│   │   ├── search.py                  # Recherche sémantique via FAISS LangChain
+│   │   └── faiss_store.py             # Ancien store FAISS bas niveau conservé pour les tests
 │   └── rag/                           # Logique RAG : recherche, prompts et génération
 │       ├── langchain_chain.py         # Assemblage des messages avec LangChain
 │       ├── prompts.py                 # Prompts métier du chatbot Écho
@@ -146,6 +148,7 @@ Les tests couvrent actuellement :
 - la construction des documents textuels RAG ;
 - le chunking des documents avant indexation ;
 - la génération d'embeddings Mistral avec des tests mockés, sans appel réseau ;
+- l'adaptateur d'embeddings LangChain et le vector store FAISS LangChain ;
 - les prompts métier du chatbot Écho ;
 - l'assemblage des messages LangChain sans appel réseau ;
 - la chaîne RAG avec recherche, construction du contexte et génération mockée ;
@@ -202,17 +205,19 @@ La stratégie de chunking retenue est volontairement simple :
 - chaque chunk conserve `event_id`, `chunk_id`, `chunk_index`, `chunk_count` et les métadonnées de l'événement.
 
 
-Chaque chunk peut ensuite être transformé en vecteur avec le modèle d'embeddings Mistral. Un test manuel est disponible pour vérifier l'appel à l'API avec la clé locale :
+Chaque chunk peut ensuite être transformé en vecteur avec le modèle d'embeddings Mistral. Ces embeddings sont utilisés pour construire le vector store FAISS LangChain. Un test manuel est disponible pour vérifier l'appel à l'API avec la clé locale :
 
 ```bash
 poetry run python scripts/05_test_mistral_embeddings.py
 ```
 
-L'index FAISS local et le mapping de métadonnées peuvent ensuite être reconstruits avec :
+Le vector store FAISS LangChain (`langchain_community.vectorstores.FAISS`) peut ensuite être reconstruit avec :
 
 ```bash
 poetry run python scripts/rebuild_index.py
 ```
+
+Cette commande sauvegarde l'index sous forme de `vector_store/index.faiss` + `vector_store/index.pkl` (format `save_local()` de LangChain).
 
 Une fois l'index reconstruit, un script permet de tester la recherche sémantique sur quelques requêtes prédéfinies :
 
@@ -226,16 +231,18 @@ La chaîne RAG d'Écho s'appuie sur quatre étapes simples :
 
 ```text
 question utilisateur
-→ recherche sémantique FAISS
-→ construction du contexte et des messages LangChain
+→ retriever LangChain (.as_retriever(search_kwargs={"k": 5})) sur le vector store FAISS
+→ construction du contexte et des messages LangChain (ChatPromptTemplate)
 → génération de réponse avec Mistral
 ```
 
-La logique est organisée dans `echo_app/rag/` :
+La logique est organisée dans `echo_app/rag/` et `echo_app/indexing/` :
 
-- [`rag_service.py`](echo_app/rag/rag_service.py) orchestre la recherche, le contexte, l'appel Mistral et les sources ;
+- [`rag_service.py`](echo_app/rag/rag_service.py) orchestre le retriever LangChain, le contexte, l'appel Mistral et les sources ;
 - [`prompts.py`](echo_app/rag/prompts.py) centralise les prompts métier ;
-- [`langchain_chain.py`](echo_app/rag/langchain_chain.py) construit les messages envoyés au modèle.
+- [`langchain_chain.py`](echo_app/rag/langchain_chain.py) construit les messages envoyés au modèle ;
+- [`langchain_faiss_store.py`](echo_app/indexing/langchain_faiss_store.py) construit/charge le vector store FAISS LangChain ;
+- [`langchain_embeddings.py`](echo_app/indexing/langchain_embeddings.py) expose les embeddings Mistral à LangChain.
 
 Commandes utiles :
 

@@ -6,7 +6,7 @@
 2. [Architecture du système](#2-architecture-du-système)
 3. [Préparation et vectorisation des données](#3-préparation-et-vectorisation-des-données)
 4. [Choix du modèle NLP](#4-choix-du-modèle-nlp)
-5. [Construction de la base vectorielle](#5-construction-de-la-base-vectorielle)
+5. [Base vectorielle et recherche sémantique](#5-base-vectorielle-et-recherche-sémantique)
 6. [API et endpoints exposés](#6-api-et-endpoints-exposés)
 7. [Évaluation du système](#7-évaluation-du-système)
 8. [Recommandations et perspectives](#8-recommandations-et-perspectives)
@@ -62,26 +62,61 @@ Le périmètre du POC est volontairement limité afin de rester simple et maîtr
 
 Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
 
-À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction de l’index FAISS, la recherche sémantique, la chaîne RAG (recherche FAISS + prompting LangChain + génération Mistral) et une évaluation automatique simple sur un jeu de test annoté sont implémentés et testés. Seule l’API finale reste à compléter dans les étapes suivantes.
+À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction du vector store FAISS LangChain, la recherche sémantique, la chaîne RAG (retriever FAISS LangChain + prompting LangChain + génération Mistral) et une évaluation automatique simple sur un jeu de test annoté sont implémentés et testés. Seule l’API finale reste à compléter dans les étapes suivantes.
 
 ## 2. Architecture du système
 
-### Vue globale
+### Schéma d’architecture du système
 
-L’architecture cible du système est la suivante :
+Le schéma ci-dessous présente les principaux composants du système Écho. Il sépare le pipeline de préparation des données, l’indexation vectorielle, la couche RAG et l’API.
 
 ```text
-API OpenAgenda
-→ collecte des événements
-→ filtrage et nettoyage
-→ documents Markdown
-→ chunks
-→ embeddings Mistral
-→ index FAISS + métadonnées
-→ recherche sémantique
-→ contexte pour le modèle de langage
-→ réponse utilisateur via API
+┌─────────────────────────────────────────────────────────────────────┐
+│ 1. Préparation des données                                          │
+│                                                                     │
+│ API OpenAgenda                                                      │
+│   → collecte des événements                                         │
+│   → filtrage géographique et temporel                               │
+│   → nettoyage et normalisation                                      │
+│   → documents Markdown                                              │
+│   → découpage en chunks                                             │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 2. Indexation vectorielle                                           │
+│                                                                     │
+│ Chunks d’événements                                                 │
+│   → embeddings Mistral avec mistral-embed                           │
+│   → vector store FAISS LangChain                                    │
+│   → sauvegarde locale dans vector_store/                            │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 3. Chaîne RAG                                                       │
+│                                                                     │
+│ Question utilisateur                                                │
+│   → retriever LangChain via as_retriever(search_kwargs={"k": 5})    │
+│   → récupération des documents pertinents                           │
+│   → construction du contexte                                        │
+│   → prompt LangChain avec ChatPromptTemplate                        │
+│   → génération Mistral avec mistral-small-latest                    │
+│   → réponse augmentée avec sources                                  │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 4. Exposition API                                                   │
+│                                                                     │
+│ Utilisateur final                                                   │
+│   → API FastAPI                                                     │
+│   → endpoint POST /ask                                              │
+│   → RagService.ask(question)                                        │
+│   → réponse JSON : question, answer, sources                        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
 
 ### Données entrantes
 
@@ -111,14 +146,14 @@ Le fichier `events_documents.jsonl` est la base utilisée pour construire le vec
 
 Les événements nettoyés sont transformés en documents Markdown. Ces documents sont ensuite découpés en chunks, puis vectorisés avec le modèle d’embedding Mistral.
 
-Les vecteurs sont stockés dans un index FAISS, tandis que les informations lisibles sont conservées séparément dans un fichier de métadonnées.
+Les vecteurs et leurs métadonnées sont stockés dans un vector store FAISS LangChain (`langchain_community.vectorstores.FAISS`), qui les sauvegarde localement sous forme de deux fichiers `index.faiss` + `index.pkl`.
 
 ### Intégration LLM
 
 L’intégration avec le modèle de langage est portée par la classe `RagService`, dans `echo_app/rag/rag_service.py`. Cette classe orchestre :
 
-1. la recherche FAISS via la fonction existante `search_similar_events()` ;
-2. la construction d’un contexte numéroté à partir des chunks retrouvés ;
+1. la recherche sémantique via le retriever LangChain obtenu avec `vectorstore.as_retriever(search_kwargs={"k": top_k})`, appelé par `retriever.invoke(question)` ;
+2. la construction d’un contexte numéroté à partir des `Document` retrouvés ;
 3. la construction d’un message utilisateur combinant le contexte et la question ;
 4. l’appel à Mistral via `client.chat.complete()` ;
 5. l’extraction d’une liste de sources lisibles, dédoublonnée par `event_id`.
@@ -146,7 +181,7 @@ Les principales technologies utilisées sont :
 - OpenAgenda / Opendatasoft pour les données ;
 - pandas pour l’exploration et la préparation des données ;
 - Mistral AI pour les embeddings et la génération de réponse ;
-- FAISS pour l’index vectoriel ;
+- FAISS via LangChain pour l’index vectoriel et la recherche sémantique ;
 - FastAPI pour l’API cible ;
 - pytest pour les tests automatisés ;
 - ruff pour la qualité du code.
@@ -285,7 +320,7 @@ Le prompt système et le prompt utilisateur sont versionnés dans `echo_app/rag/
 
 L'assemblage des messages `[system, user]` envoyés au modèle passe par LangChain (`ChatPromptTemplate`) dans `echo_app/rag/langchain_chain.py`. La fonction `build_langchain_messages(question, context)` injecte le prompt système et le prompt utilisateur dans le template, puis convertit les messages LangChain en simples dictionnaires `{"role", "content"}` directement compatibles avec `client.chat.complete()` du SDK Mistral.
 
-LangChain est volontairement limité ici à la construction du prompt. La recherche vectorielle reste assurée par la couche `echo_app/indexing` (et donc par `search_similar_events()`), sans passer par un VectorStore LangChain. Aucun historique conversationnel n'est ajouté à ce stade : chaque question est traitée indépendamment, ce qui garde l'orchestration simple et explicable.
+LangChain joue désormais un rôle plus complet dans la chaîne RAG. La recherche vectorielle passe par le vector store FAISS fourni par LangChain (`langchain_community.vectorstores.FAISS`), exposé à `RagService` sous forme de retriever via `.as_retriever(search_kwargs={"k": top_k})`. La récupération des chunks pertinents se fait donc via `retriever.invoke(question)`, et la construction des messages reste pilotée par `ChatPromptTemplate`. Aucun historique conversationnel n'est ajouté à ce stade : chaque question est traitée indépendamment, ce qui garde l'orchestration simple et explicable.
 
 Le prompt envoyé à Mistral est découpé en deux messages :
 
@@ -315,21 +350,22 @@ La qualité des réponses dépendra de plusieurs facteurs :
 - capacité du modèle à respecter le contexte fourni ;
 - présence ou absence d’informations suffisantes dans les événements collectés.
 
-L’utilisation d’un système RAG réduit le risque de réponse inventée, mais ne le supprime pas complètement. Des tests d’évaluation seront nécessaires pour mesurer la qualité réelle des réponses.
+L’utilisation d’un système RAG réduit le risque de réponse inventée, mais ne le supprime pas complètement. Une première évaluation automatique a été mise en place sur un jeu annoté de 15 questions ; elle devra être enrichie pour obtenir une mesure plus robuste.
 
-## 5. Construction de la base vectorielle
+## 5. Base vectorielle et recherche sémantique
+#### Intégration avec LangChain
 
-### FAISS utilisé
+Le système utilise désormais le vector store FAISS fourni par LangChain (`langchain_community.vectorstores.FAISS`). Les chunks OpenAgenda sont convertis en objets `Document`, indexés avec les embeddings Mistral, puis sauvegardés localement dans `vector_store/`.
 
-L’index vectoriel est construit avec FAISS à partir des embeddings générés.
+Au moment de répondre à une question, `RagService` recharge cet index, crée un retriever avec `.as_retriever(search_kwargs={"k": 5})`, récupère les documents pertinents, puis injecte leur contenu dans un `ChatPromptTemplate` avant l’appel à Mistral.
 
-Le type d’index utilisé est :
+Cette approche garde le pipeline métier existant tout en utilisant les abstractions LangChain standard : vector store, retriever et prompt template.
 
-```text
-IndexFlatL2
-```
+### Base vectorielle et recherche sémantique
 
-Ce choix est adapté au POC car :
+Le vector store LangChain s'appuie en interne sur un index `IndexFlatL2` construit par `langchain_community.vectorstores.FAISS`.
+
+Ce type d'index est adapté au POC car :
 
 - le volume de données est faible ;
 - l’index est simple à construire ;
@@ -357,36 +393,31 @@ Le vector store est sauvegardé localement dans le dossier :
 vector_store/
 ```
 
-Deux fichiers principaux sont générés :
+Le format actif est celui produit par `vectorstore.save_local()` de LangChain, qui génère deux fichiers :
 
 ```text
 vector_store/index.faiss
-vector_store/metadata.json
+vector_store/index.pkl
 ```
 
 Le fichier `index.faiss` contient les vecteurs numériques utilisés par FAISS pour la recherche.
 
-Le fichier `metadata.json` contient les informations associées à chaque vecteur.
+Le fichier `index.pkl` contient le docstore LangChain : il associe chaque vecteur à un `Document` (texte du chunk + métadonnées de l'événement).
 
-Ces fichiers sont générés localement et ne doivent pas être versionnés dans Git.
+Ces fichiers sont générés localement et ne doivent pas être versionnés dans Git. Le script de reconstruction supprime explicitement un éventuel ancien `metadata.json` résiduel pour éviter toute ambiguïté avec l'ancien format maison.
 
 ### Métadonnées associées
 
-FAISS stocke les vecteurs, mais ne conserve pas directement les informations lisibles comme le titre, la ville, les dates ou l’URL de l’événement.
+Chaque vecteur est associé à un `Document` LangChain. Les métadonnées sont stockées dans `document.metadata` (dict à plat) et contiennent notamment :
 
-Le fichier `metadata.json` permet donc de faire le lien entre un résultat FAISS et le contenu affichable.
-
-Chaque entrée contient notamment :
-
-- `faiss_id` ;
-- `chunk_id` ;
 - `event_id` ;
+- `chunk_id` ;
 - `chunk_index` ;
 - `chunk_count` ;
-- `chunk_text` ;
-- `metadata`.
+- `title`, `city`, `start_date`, `url` (issus des métadonnées événement) ;
+- les autres champs OpenAgenda utiles (`location_name`, `latitude`, `longitude`, etc.).
 
-Le mapping entre `faiss_id` et `metadata.json` permet de retrouver le contenu textuel et les informations d’affichage après une recherche vectorielle.
+LangChain s'occupe du mapping entre l'index FAISS et le `Document` : après une recherche vectorielle, `retriever.invoke(question)` retourne directement une liste de `Document`, avec leur `page_content` (texte du chunk) et leur `metadata` prêts à l'emploi.
 
 ### Reconstruction de l’index
 
@@ -403,8 +434,9 @@ Elle exécute les étapes suivantes :
 1. chargement des documents depuis `data/processed/events_documents.jsonl` ;
 2. construction des chunks ;
 3. génération des embeddings avec Mistral ;
-4. construction de l’index FAISS ;
-5. sauvegarde de `index.faiss` et `metadata.json` dans `vector_store/`.
+4. conversion des chunks en `Document` LangChain ;
+5. construction du vector store FAISS LangChain (`FAISS.from_embeddings`) ;
+6. sauvegarde de `index.faiss` et `index.pkl` dans `vector_store/` via `save_local()`.
 
 Cette reconstruction est utile lorsque les données changent ou lorsque la stratégie de chunking est modifiée. Dans cette première version, l’index est reconstruit entièrement plutôt que mis à jour partiellement. Ce choix est plus simple et plus fiable pour un POC.
 
@@ -555,24 +587,23 @@ L’évaluation automatique a été lancée sur les 15 questions annotées. Le r
 ```json
 {
   "total": 15,
-  "ok": 13,
-  "partial": 2,
+  "ok": 14,
+  "partial": 1,
   "ko": 0,
-  "average_keyword_match_rate": 0.813,
-  "average_event_recall": 0.789
+  "average_keyword_match_rate": 0.818,
+  "average_event_recall": 0.811
 }
 ```
 
 Ces résultats montrent que le système répond correctement à la majorité des questions du jeu de test. Les requêtes thématiques précises, par exemple autour de l’astronomie, des expositions, des spectacles, de la santé ou de la retraite, sont bien traitées. Aucun cas n’est classé `ko` sur cette exécution.
 
-Deux réponses sont classées `partial` :
+Une réponse est classée `partial` :
 
 | Question | Observation | Interprétation |
 |---|---|---|
-| Je cherche une aide pour créer mon entreprise à La Teste-de-Buch. | La réponse est partiellement pertinente, mais tous les événements attendus ne sont pas retrouvés dans les sources retournées. | Le retrieval peut être limité lorsque plusieurs événements proches traitent du même sujet. |
 | Peux-tu me conseiller un restaurant à Arcachon ? | Le système répond prudemment, mais des sources sont tout de même remontées. | La détection automatique du hors sujet reste perfectible. |
 
-Ces deux cas montrent surtout les limites classiques d’un premier système RAG : retrieval incomplet sur certaines questions larges ou proches, absence de filtres métier et détection du hors sujet encore simple. La métrique `keyword_match_rate` reste également sensible aux paraphrases, car elle repose sur une recherche de mots-clés exacte dans la réponse générée.
+Ce cas montre surtout une limite classique d’un premier système RAG : la détection du hors sujet reste simple et peut encore laisser remonter des sources.
 
 Les améliorations réalistes seraient :
 
@@ -609,10 +640,10 @@ Cela valide le fonctionnement de la chaîne :
 
 ```text
 requête utilisateur
-→ embedding Mistral
-→ recherche FAISS
-→ récupération des chunks
-→ récupération des métadonnées
+→ embedding Mistral via l’adaptateur LangChain
+→ retriever FAISS LangChain
+→ récupération des Documents pertinents
+→ contexte RAG + sources
 ```
 
 Certaines requêtes composées donnent des résultats moins précis. Par exemple, une requête combinant un type d’événement et une commune peut favoriser la commune plutôt que le type d’événement.
@@ -696,8 +727,10 @@ Les principaux fichiers et dossiers sont :
 - `src/documents.py` : construction des documents RAG ;
 - `src/chunking.py` : découpage des documents en chunks ;
 - `echo_app/indexing/embeddings.py` : génération des embeddings Mistral ;
-- `echo_app/indexing/faiss_store.py` : construction, sauvegarde et chargement du vector store ;
-- `echo_app/indexing/search.py` : recherche sémantique dans FAISS ;
+- `echo_app/indexing/langchain_embeddings.py` : adaptateur embeddings Mistral compatible LangChain ;
+- `echo_app/indexing/langchain_faiss_store.py` : construction, sauvegarde et chargement du vector store FAISS LangChain ;
+- `echo_app/indexing/search.py` : recherche sémantique via le vector store FAISS LangChain ;
+- `echo_app/indexing/faiss_store.py` : ancienne implémentation FAISS bas niveau conservée pour compatibilité et tests ;
 - `echo_app/rag/rag_service.py` : chaîne RAG (recherche, contexte, prompt, génération, sources) ;
 - `echo_app/rag/prompts.py` : prompts métier d’Écho (prompt système et prompt utilisateur) ;
 - `echo_app/rag/langchain_chain.py` : assemblage des messages du prompt via LangChain ;

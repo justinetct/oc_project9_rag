@@ -1,4 +1,8 @@
-"""Tests unitaires pour la recherche sémantique FAISS."""
+"""Tests unitaires pour la recherche sémantique sur le vector store FAISS LangChain.
+
+Le vector store et l'adaptateur d'embeddings sont mockés via
+monkeypatch : aucun appel réseau à Mistral, aucun fichier à charger.
+"""
 
 import sys
 from pathlib import Path
@@ -8,83 +12,92 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from langchain_core.documents import Document  # noqa: E402
+
 from echo_app.indexing import search  # noqa: E402
 
 
-def make_faiss_metadata() -> list[dict]:
-    """Construit un mapping de métadonnées factice pour les tests."""
+def make_documents() -> list[Document]:
+    """Construit une mini collection de Documents pour les tests."""
     return [
-        {
-            "faiss_id": 0,
-            "chunk_id": "evt-1_0",
-            "event_id": "evt-1",
-            "chunk_index": 0,
-            "chunk_count": 1,
-            "chunk_text": "Soirée astronomie à Lanton.",
-            "metadata": {
+        Document(
+            page_content="Soirée astronomie à Lanton.",
+            metadata={
+                "event_id": "evt-1",
+                "chunk_id": "evt-1_0",
+                "chunk_index": 0,
+                "chunk_count": 1,
                 "title": "Initiation à l'astronomie",
                 "city": "Lanton",
                 "url": "https://example.com/evt-1",
                 "start_date": "2026-01-05T19:30",
             },
-        },
-        {
-            "faiss_id": 1,
-            "chunk_id": "evt-2_0",
-            "event_id": "evt-2",
-            "chunk_index": 0,
-            "chunk_count": 1,
-            "chunk_text": "Concert acoustique à Andernos.",
-            "metadata": {
+        ),
+        Document(
+            page_content="Concert acoustique à Andernos.",
+            metadata={
+                "event_id": "evt-2",
+                "chunk_id": "evt-2_0",
+                "chunk_index": 0,
+                "chunk_count": 1,
                 "title": "Concert acoustique",
                 "city": "Andernos-les-Bains",
                 "url": "https://example.com/evt-2",
                 "start_date": "2026-06-10T20:00",
             },
-        },
-        {
-            "faiss_id": 2,
-            "chunk_id": "evt-3_0",
-            "event_id": "evt-3",
-            "chunk_index": 0,
-            "chunk_count": 1,
-            "chunk_text": "Exposition au Bassin d'Arcachon.",
-            "metadata": {
+        ),
+        Document(
+            page_content="Exposition au Bassin d'Arcachon.",
+            metadata={
+                "event_id": "evt-3",
+                "chunk_id": "evt-3_0",
+                "chunk_index": 0,
+                "chunk_count": 1,
                 "title": "Exposition",
                 "city": "Arcachon",
                 "url": "https://example.com/evt-3",
             },
-        },
+        ),
     ]
 
 
-def install_fake_vector_store(monkeypatch, top_k_distances=None, top_k_indices=None) -> dict:
-    """Installe des mocks pour load_vector_store, embed_query et search_index."""
-    fake_index = object()
-    fake_metadata = make_faiss_metadata()
-    calls: dict = {}
+class FakeVectorStore:
+    """Vector store factice qui simule similarity_search_with_score()."""
 
-    def fake_load_vector_store():
-        calls["load_called"] = True
-        return fake_index, fake_metadata
+    def __init__(self, documents: list[Document], distances: list[float]) -> None:
+        self.documents = documents
+        self.distances = distances
+        self.calls: list[dict] = []
 
-    def fake_embed_query(query: str) -> list[float]:
-        calls["embed_query"] = query
-        return [0.1, 0.2, 0.3]
+    def similarity_search_with_score(
+        self, query: str, k: int = 5
+    ) -> list[tuple[Document, float]]:
+        self.calls.append({"query": query, "k": k})
+        pairs = list(zip(self.documents, self.distances, strict=True))
+        return pairs[:k]
 
-    def fake_search_index(index, query_embedding, top_k: int = 5):
-        calls["search_top_k"] = top_k
-        default_distances = [0.10, 0.25, 0.40]
-        default_indices = [0, 1, 2]
-        distances = (top_k_distances or default_distances)[:top_k]
-        indices = (top_k_indices or default_indices)[:top_k]
-        return distances, indices
 
-    monkeypatch.setattr(search, "load_vector_store", fake_load_vector_store)
-    monkeypatch.setattr(search, "embed_query", fake_embed_query)
-    monkeypatch.setattr(search, "search_index", fake_search_index)
+def install_fake_vector_store(
+    monkeypatch,
+    distances: list[float] | None = None,
+) -> FakeVectorStore:
+    """Installe un vector store factice et un adaptateur d'embeddings inerte."""
+    documents = make_documents()
+    fake_store = FakeVectorStore(
+        documents=documents,
+        distances=distances or [0.10, 0.25, 0.40],
+    )
 
-    return calls
+    def fake_load(embeddings):
+        return fake_store
+
+    class InertEmbeddings:
+        def __init__(self, *args, **kwargs) -> None:
+            return None
+
+    monkeypatch.setattr(search, "load_langchain_vector_store", fake_load)
+    monkeypatch.setattr(search, "MistralLangChainEmbeddings", InertEmbeddings)
+    return fake_store
 
 
 def test_search_similar_events_returns_expected_metadata(monkeypatch) -> None:
@@ -99,16 +112,19 @@ def test_search_similar_events_returns_expected_metadata(monkeypatch) -> None:
     assert first["event_id"] == "evt-1"
     assert first["metadata"]["title"] == "Initiation à l'astronomie"
     assert first["metadata"]["city"] == "Lanton"
+    # event_id et chunk_id doivent rester au niveau racine, pas dans metadata
+    assert "event_id" not in first["metadata"]
+    assert "chunk_id" not in first["metadata"]
 
 
 def test_search_similar_events_respects_top_k(monkeypatch) -> None:
-    """La taille des résultats et l'appel à search_index doivent suivre top_k."""
-    calls = install_fake_vector_store(monkeypatch)
+    """La taille des résultats et l'appel au vector store doivent suivre top_k."""
+    fake_store = install_fake_vector_store(monkeypatch)
 
     results = search.search_similar_events("astronomie", top_k=1)
 
     assert len(results) == 1
-    assert calls["search_top_k"] == 1
+    assert fake_store.calls == [{"query": "astronomie", "k": 1}]
 
 
 def test_search_similar_events_raises_when_query_is_empty(monkeypatch) -> None:
@@ -127,7 +143,7 @@ def test_search_similar_events_raises_when_top_k_is_invalid(monkeypatch) -> None
         search.search_similar_events("astronomie", top_k=0)
 
 
-def test_search_similar_events_result_contains_all_expected_keys(monkeypatch) -> None:
+def test_search_similar_events_result_contains_expected_keys(monkeypatch) -> None:
     """Chaque résultat doit exposer text, score, metadata et les identifiants."""
     install_fake_vector_store(monkeypatch)
 
@@ -140,22 +156,25 @@ def test_search_similar_events_result_contains_all_expected_keys(monkeypatch) ->
         "metadata",
         "chunk_id",
         "event_id",
-        "faiss_id",
         "distance",
     }
     assert first["text"] == "Soirée astronomie à Lanton."
     assert first["score"] == pytest.approx(0.10)
     assert first["distance"] == pytest.approx(0.10)
-    assert first["faiss_id"] == 0
 
 
 def test_search_similar_events_propagates_missing_vector_store(monkeypatch) -> None:
     """Si le vector store est absent, l'erreur doit remonter au caller."""
 
-    def fake_load_vector_store():
-        raise FileNotFoundError("Index FAISS introuvable.")
+    def fake_load(embeddings):
+        raise FileNotFoundError("Index FAISS LangChain introuvable dans vector_store.")
 
-    monkeypatch.setattr(search, "load_vector_store", fake_load_vector_store)
+    class InertEmbeddings:
+        def __init__(self, *args, **kwargs) -> None:
+            return None
 
-    with pytest.raises(FileNotFoundError, match="Index FAISS introuvable"):
+    monkeypatch.setattr(search, "load_langchain_vector_store", fake_load)
+    monkeypatch.setattr(search, "MistralLangChainEmbeddings", InertEmbeddings)
+
+    with pytest.raises(FileNotFoundError, match="Index FAISS LangChain introuvable"):
         search.search_similar_events("astronomie", top_k=3)
