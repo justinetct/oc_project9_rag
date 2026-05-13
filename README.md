@@ -7,10 +7,11 @@
 
 Concevoir un système RAG capable de répondre à des questions à partir d’événements collectés via OpenAgenda.
 
-Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents sont ensuite découpés, transformés en embeddings, indexés avec FAISS et utilisés par le chatbot Écho pour générer des réponses contextualisées.
+Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents sont ensuite découpés, transformés en embeddings, indexés avec FAISS via LangChain et utilisés par le chatbot Écho pour générer des réponses contextualisées.
 
 ## Sommaire
 
+- [Stack technique](#stack-technique)
 - [Documentation](#documentation)
 - [Structure du projet](#structure-du-projet)
 - [Installation](#installation)
@@ -137,10 +138,65 @@ poetry run python -c "from echo_app.config import get_mistral_api_key; print('Mi
 
 ```bash
 poetry run ruff check .
-poetry run pytest
+poetry run pytest -v
+poetry run python -m compileall src echo_app scripts
 ```
 
-Les tests couvrent actuellement :
+Le coverage peut être recalculé avec :
+
+```bash
+poetry run pytest --cov=src --cov=echo_app --cov=scripts --cov-report=term-missing
+```
+
+Résultat :
+
+```bash
+=================================================================================== tests coverage ===================================================================================
+_________________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 __________________________________________________________________
+
+Name                                         Stmts   Miss  Cover   Missing
+--------------------------------------------------------------------------
+echo_app/__init__.py                             0      0   100%
+echo_app/api/__init__.py                         0      0   100%
+echo_app/api/main.py                             0      0   100%
+echo_app/config.py                               7      1    86%   19
+echo_app/indexing/__init__.py                    6      0   100%
+echo_app/indexing/embeddings.py                 62      5    92%   53, 70, 82, 93, 105
+echo_app/indexing/faiss_store.py                63      8    87%   24, 34, 37, 41, 96, 98, 119, 121
+echo_app/indexing/langchain_embeddings.py        8      0   100%
+echo_app/indexing/langchain_faiss_store.py      47      3    94%   36, 92, 98
+echo_app/indexing/search.py                     17      0   100%
+echo_app/rag/__init__.py                         4      0   100%
+echo_app/rag/langchain_chain.py                 12      0   100%
+echo_app/rag/prompts.py                          4      0   100%
+echo_app/rag/rag_service.py                     66      7    89%   49, 115-117, 153-160
+--------------------------------------------------------------------------
+TOTAL                                          296     24    92%
+================================================================================ 107 passed in 0.99s =================================================================================
+```
+
+Structure des tests automatisés :
+
+```text
+tests/
+├── test_chunking.py              # Découpage des documents en chunks
+├── test_documents.py             # Construction des documents textuels RAG
+├── test_embeddings.py            # Embeddings Mistral avec appels mockés
+├── test_faiss_store.py           # Ancien store FAISS bas niveau, conservé pour compatibilité
+├── test_langchain_chain.py       # Construction des messages avec ChatPromptTemplate
+├── test_langchain_embeddings.py  # Adaptateur Mistral compatible LangChain
+├── test_langchain_faiss_store.py # Vector store FAISS LangChain : build, save, load, retriever
+├── test_openagenda.py            # Client OpenAgenda et paramètres de collecte
+├── test_preprocessing.py         # Filtrage, nettoyage et normalisation des événements
+├── test_prompts.py               # Prompts métier du chatbot Écho
+├── test_rag_evaluation.py        # Fonctions de scoring et agrégation de l'évaluation RAG
+├── test_rag_service.py           # Service RAG avec retrieval et génération mockés
+├── test_rebuild_index.py         # Reconstruction du vector store FAISS LangChain
+├── test_search.py                # Recherche sémantique via FAISS LangChain
+└── test_smoke.py                 # Tests simples d'import et de configuration
+```
+
+Les tests couvrent :
 
 - les imports principaux du projet ;
 - les fonctions d’entrée / sortie ;
@@ -203,7 +259,6 @@ La stratégie de chunking retenue est volontairement simple :
 - les événements courts restent en un seul chunk ;
 - les événements longs sont découpés par taille avec un léger overlap ;
 - chaque chunk conserve `event_id`, `chunk_id`, `chunk_index`, `chunk_count` et les métadonnées de l'événement.
-
 
 Chaque chunk peut ensuite être transformé en vecteur avec le modèle d'embeddings Mistral. Ces embeddings sont utilisés pour construire le vector store FAISS LangChain. Un test manuel est disponible pour vérifier l'appel à l'API avec la clé locale :
 
