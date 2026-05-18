@@ -527,7 +527,12 @@ Un script fonctionnel manuel [`scripts/api_test.py`](../scripts/api_test.py) per
 
 ### État actuel de l’évaluation
 
-Une évaluation automatique simple est désormais implémentée via le script `scripts/08_evaluate_rag.py`. Elle rejoue les 15 questions du jeu annoté sur `RagService.ask()` et calcule des métriques reproductibles (`keyword_match_rate`, `event_recall`, `sources_count`, `status`). Elle donne une première base reproductible pour suivre la qualité des réponses, tout en restant volontairement limitée : elle ne mesure pas la qualité rédactionnelle et doit être complétée par une analyse humaine.
+L’évaluation automatique est implémentée via le script `scripts/08_evaluate_rag.py`. Elle rejoue les 15 questions du jeu annoté sur `RagService.ask(question, include_contexts=True)` et calcule deux familles de métriques :
+
+- **Évaluation principale — Ragas** (`faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`), calculée par un LLM juge Mistral (`mistral-small-latest` + `mistral-embed`) ; elle mesure la fidélité de la réponse au contexte récupéré et la qualité du retrieval ;
+- **Métriques maison complémentaires** (`keyword_match_rate`, `event_recall`, `sources_count`, `status`) conservées comme signaux d’analyse lisibles à la main, sans dépendre du juge.
+
+Cette évaluation donne une base reproductible pour suivre la qualité des réponses, tout en restant volontairement limitée : elle ne remplace pas une analyse humaine et les scores Ragas peuvent légèrement varier d’une exécution à l’autre malgré `temperature=0` côté juge.
 
 Une validation manuelle complémentaire reste possible via `scripts/07_test_rag_service.py` (chaîne RAG complète sur quelques questions types) et `scripts/06_test_semantic_search.py` (recherche sémantique seule).
 
@@ -535,6 +540,7 @@ Une validation manuelle complémentaire reste possible via `scripts/07_test_rag_
 
 Un premier jeu de questions/réponses annoté a été créé et stocké dans [`data/evaluation/qa_annotated.csv`](../data/evaluation/qa_annotated.csv). Il contient 15 questions couvrant plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.
 
+> [!NOTE]
 > Le jeu contient aussi un cas hors sujet lié à une demande de restaurant, afin de vérifier que le système ne force pas une réponse quand le contexte ne le permet pas.
 
 Chaque ligne du CSV contient cinq colonnes :
@@ -556,13 +562,35 @@ Ce jeu sert de base à l’évaluation automatique : le script vérifie notammen
 
 ### Évaluation automatique
 
-Le script `scripts/08_evaluate_rag.py` exécute une évaluation automatique simple sur l’ensemble du jeu annoté. Pour chaque question, il appelle `RagService.ask()` puis calcule trois métriques :
+Le script `scripts/08_evaluate_rag.py` exécute l’évaluation complète sur les 15 questions annotées. Le format est volontairement minimal :
 
-- `keyword_match_rate` : proportion de mots-clés attendus retrouvés dans la réponse générée (comparaison lowercase, sous-chaîne) ;
-- `event_recall` : proportion d’`event_ids` attendus retrouvés dans les sources retournées ;
-- `sources_count` : nombre de sources distinctes affichées à l’utilisateur.
+- `datasets.Dataset.from_dict` avec les colonnes `question`, `answer`, `contexts`, `ground_truth` ;
+- `ChatMistralAI` + `MistralAIEmbeddings` (langchain-mistralai) passés directement à `ragas.evaluate` (sans wrapper Ragas explicite, qui est par ailleurs déprécié) ;
+- 4 métriques Ragas standards : `faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`.
 
-Chaque ligne reçoit un statut simple :
+Le **LLM juge** utilisé par Ragas est `mistral-large-latest`. Il est volontairement différent du modèle de production de la chaîne RAG (`mistral-small-latest`) : `mistral-small` respecte moins bien les schémas Pydantic attendus par les prompts legacy de Ragas (échec récurrent du parser `StringIO`), tandis que `mistral-large` les suit fidèlement. La chaîne RAG d'Écho côté production n'est pas affectée par ce choix, qui ne concerne que l'évaluation.
+
+**Pipeline en deux étapes** :
+
+1. **15 appels Mistral** (étape 1) — pour chaque question, le script appelle `RagService.ask(question, include_contexts=True)` afin de récupérer la réponse, les sources et les chunks utilisés. Un log lisible par ligne affiche `chunks=… | sources=… | attendu=… | status=…`.
+2. **15 × 4 = 60 jobs Ragas** (étape 2) — chaque job peut déclencher 1 ou 2 appels Mistral supplémentaires (LLM juge + embeddings) selon la métrique.
+
+**Métriques Ragas (évaluation principale)** :
+
+- `faithfulness` : la réponse reste-t-elle fidèle aux contextes récupérés (pas d’invention) ?
+- `answer_relevancy` : la réponse est-elle réellement pertinente vis-à-vis de la question posée ?
+- `context_precision` : les chunks pertinents sont-ils bien placés en tête du retrieval ?
+- `context_recall` : le retrieval couvre-t-il bien la réponse de référence attendue ?
+
+> [!WARNING]
+> **Note technique sur `answer_relevancy`** : la métrique est instanciée explicitement avec `AnswerRelevancy(strictness=1)` au lieu du singleton par défaut (`strictness=3`). Le défaut plante en effet avec `langchain-mistralai 1.1.4` (`TypeError: unsupported operand type(s) for +=: 'dict' and 'dict'` lors de l’agrégation des `n=3` complétions parallèles). Avec `strictness=1`, une seule question alternative est générée par réponse pour le calcul de similarité — score légèrement moins robuste mais reproductible.
+
+**Métriques maison (colonnes complémentaires)** — calculées sans LLM juge, lisibles à la main :
+
+- `keyword_match_rate` : proportion de mots-clés attendus retrouvés dans la réponse (lowercase, sous-chaîne) ;
+- `event_recall` : proportion d’`event_ids` attendus retrouvés dans les sources ;
+- `sources_count` : nombre de sources distinctes affichées à l’utilisateur ;
+- `status` (`ok` / `partial` / `ko`) résumant la cohérence globale :
 
 | Status | Signification |
 |---|---|
@@ -572,52 +600,67 @@ Chaque ligne reçoit un statut simple :
 
 Les résultats sont versionnés pour conserver une trace de la dernière évaluation :
 
-- [`data/evaluation/rag_evaluation_results.csv`](../data/evaluation/rag_evaluation_results.csv) : résultats détaillés, une ligne par question ;
-- [`data/evaluation/rag_evaluation_summary.json`](../data/evaluation/rag_evaluation_summary.json) : résumé agrégé des métriques.
+- [`data/evaluation/rag_evaluation_results.csv`](../data/evaluation/rag_evaluation_results.csv) : résultats détaillés, une ligne par question, colonnes maison + 4 colonnes Ragas ;
+- [`data/evaluation/rag_evaluation_summary.json`](../data/evaluation/rag_evaluation_summary.json) : résumé agrégé (compteurs status, moyennes maison et moyennes Ragas) ;
+- [`data/evaluation/rag_evaluation.log`](../data/evaluation/rag_evaluation.log) : sortie console de la dernière exécution validée (étape 1 ligne par ligne + résumé final), conservée pour pouvoir relire les logs sans relancer les ~34 minutes d'évaluation.
 
-Exemples de lignes de résultat :
+> [!IMPORTANT]
+> Cette évaluation ne remplace pas une revue humaine, mais elle donne une base reproductible pour repérer les régressions. La génération est stabilisée avec `SEED=42` et `temperature=0.2` côté chaîne RAG, `temperature=0` côté juge Ragas.
 
-| Question | Status | keyword_match_rate | event_recall |
-|---|---|---:|---:|
-| Quels événements autour de l'astronomie sont disponibles ? | `ok` | 1.000 | 1.000 |
-| Peux-tu me conseiller un restaurant à Arcachon ? | `partial` | 1.000 | 0.000 |
-
-> Cette évaluation ne remplace pas une revue humaine, mais elle donne une base reproductible pour repérer les régressions. La génération est stabilisée avec `SEED=42` et `temperature=0.2`.
-
-Le notebook [`notebooks/04_rag_evaluation.ipynb`](../notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les cas `partial` / `ko`. Il ne relance pas les appels Mistral à l’ouverture.
+Le notebook [`notebooks/04_rag_evaluation.ipynb`](../notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les cas `partial` / `ko`. Il lit les fichiers CSV/JSON déjà produits et ne relance pas les appels Mistral à l’ouverture.
 
 
 ### Analyse des erreurs
 
-L’évaluation automatique a été lancée sur les 15 questions annotées. Le résumé obtenu est le suivant :
+L’évaluation lancée sur les 15 questions annotées avec le pipeline final donne le résumé suivant :
 
+<!-- metric-cards -->
 ```json
 {
   "total": 15,
   "ok": 14,
   "partial": 1,
   "ko": 0,
-  "average_keyword_match_rate": 0.818,
-  "average_event_recall": 0.811
+  "average_keyword_match_rate": 0.83,
+  "average_event_recall": 0.811,
+  "average_faithfulness": 0.927,
+  "average_answer_relevancy": 0.828,
+  "average_context_precision": 0.942,
+  "average_context_recall": 0.867
 }
 ```
 
-Ces résultats montrent que le système répond correctement à la majorité des questions du jeu de test. Les requêtes thématiques précises, par exemple autour de l’astronomie, des expositions, des spectacles, de la santé ou de la retraite, sont bien traitées. Aucun cas n’est classé `ko` sur cette exécution.
+Les 4 métriques Ragas sont calculées pour les 15 questions (0 NaN), et confirment que la chaîne RAG est très fiable :
 
-Une réponse est classée `partial` :
+- `faithfulness` ≈ 0.927 : très peu d’invention, les réponses restent fidèles aux chunks récupérés ;
+- `context_precision` ≈ 0.942 : les chunks pertinents sont systématiquement bien placés en tête du retrieval ;
+- `context_recall` ≈ 0.867 : la couverture du retrieval est solide vis-à-vis des réponses attendues ;
+- `answer_relevancy` ≈ 0.828 : les réponses générées répondent bien aux questions, à l’exception du cas hors sujet (voir ci-dessous).
+
+Une seule question est classée `partial` :
 
 | Question | Observation | Interprétation |
 |---|---|---|
-| Peux-tu me conseiller un restaurant à Arcachon ? | Le système répond prudemment, mais des sources sont tout de même remontées. | La détection automatique du hors sujet reste perfectible. |
+| Peux-tu me conseiller un restaurant à Arcachon ? | `keyword_match_rate` 0.333, `event_recall` 0 (rien attendu côté event_ids) ; côté Ragas, `faithfulness` 0.667, `context_precision` 0.806, `context_recall` 1.0, **`answer_relevancy` 0.0**. Le système répond prudemment mais 4 sources sont tout de même remontées. | Le score `answer_relevancy` à 0 est cohérent et attendu : Ragas détecte que la réponse (un refus) n’est pas alignée avec la question posée. C’est exactement ce qu’on veut sur un cas hors sujet, mais le status maison reste `partial` parce que des sources sont remontées. La détection automatique du hors sujet côté chaîne RAG reste perfectible. |
 
-Ce cas montre surtout une limite classique d’un premier système RAG : la détection du hors sujet reste simple et peut encore laisser remonter des sources.
+Aucun cas n’est classé `ko`.
+
+**Limites connues de l’évaluation :**
+
+- jeu de seulement 15 questions, à étendre pour stabiliser les moyennes Ragas ;
+- l’exécution déclenche 15 appels Mistral pour la chaîne RAG puis 60 jobs Ragas (15 × 4 métriques, plusieurs appels LLM possibles par job) ; elle consomme du quota et n’est pas lancée en CI ;
+- le plan Mistral Experiment (gratuit) impose ~1 RPS implicite, ce qui force `RAGAS_MAX_WORKERS=1` (sériel) pour ne pas perdre de scores en 429. Conséquence : l’évaluation complète prend ~30-35 min plutôt que ~5 min en parallèle. Avec un plan Scale (6 RPS officiels), `max_workers` peut être remonté à 4-8 ;
+- les scores Ragas peuvent légèrement varier d’une exécution à l’autre malgré `temperature=0` côté juge ;
+- `answer_relevancy` utilise `strictness=1` (1 question alternative générée au lieu de 3 par défaut), ce qui rend le score un peu moins stable mais évite le bug d’agrégation avec `langchain-mistralai 1.1.4` ;
+- la détection automatique du hors sujet reste perfectible côté chaîne RAG (le seul cas `partial` est lié à ce point).
 
 Les améliorations réalistes seraient :
 
 - ajouter des filtres par commune, date ou gratuité ;
 - améliorer la détection des questions hors sujet ;
 - ajouter un reranking pour mieux sélectionner les événements les plus pertinents ;
-- enrichir le jeu de test annoté avec davantage de cas.
+- enrichir le jeu de test annoté avec davantage de cas ;
+- passer à un plan Mistral payant pour paralléliser l’évaluation et relever `strictness` sur `answer_relevancy` dès qu’une version corrigée de `langchain-mistralai` rendra l’agrégation `n > 1` fiable.
 
 ### Validation technique actuelle
 
@@ -659,13 +702,12 @@ Cette limite est normale pour une première recherche sémantique brute, sans fi
 
 ### Évaluation cible
 
-L’évaluation automatique actuelle reste à étendre au-delà de ce premier jeu de 15 questions. Les pistes principales sont :
+L’évaluation actuelle (Ragas + métriques maison) reste à étendre au-delà de ce premier jeu de 15 questions. Les pistes principales sont :
 
-* élargir le jeu annoté pour couvrir plus largement les intentions utilisateur ;
-* ajouter une métrique sémantique tolérante aux paraphrases (similarité par embeddings ou lemmatisation) en complément du matching sous-chaîne ;
-* mesurer la précision en plus du rappel (pour pénaliser les réponses qui remontent trop d’événements hors sujet) ;
-* intégrer une note qualitative humaine sur un sous-ensemble pour calibrer les seuils du `status` ;
-* exécuter l’évaluation en intégration continue dès qu’une couverture suffisante sera atteinte.
+* élargir le jeu annoté pour couvrir plus largement les intentions utilisateur et stabiliser les moyennes Ragas ;
+* mesurer la précision en plus du rappel côté métriques maison (pour pénaliser les réponses qui remontent trop d’événements hors sujet) ;
+* intégrer une note qualitative humaine sur un sous-ensemble pour calibrer les seuils du `status` et croiser avec les scores Ragas ;
+* envisager l’exécution de l’évaluation en intégration continue (avec budget LLM dédié) dès qu’une couverture suffisante sera atteinte.
 
 ## 8. Recommandations et perspectives
 

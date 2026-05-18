@@ -1,5 +1,5 @@
 # Écho - Chatbot culturel
-*Projet OpenClassrooms - Concevez et déployez un système RAG.*
+*POC d'un chatbot RAG sur les événements culturels du Bassin d'Arcachon.*
 
 > Écho est le chatbot culturel développé par Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
@@ -45,6 +45,7 @@ Les documents techniques sont regroupés dans [`docs/`](docs/) :
 | [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md) | Pipeline de collecte, filtrage, nettoyage et construction des documents textuels. |
 | [`docs/faiss_indexing.md`](docs/faiss_indexing.md) | Stratégie de chunking, embeddings Mistral, index FAISS et recherche sémantique. |
 | [`docs/rapport_technique.md`](docs/rapport_technique.md) | Rapport technique du POC : architecture, RAG, évaluation, limites et perspectives. |
+| [`docs/rapport_technique.html`](docs/rapport_technique.html) | Version HTML stylée du rapport technique, à ouvrir dans un navigateur. |
 
 ## Structure du projet
 
@@ -76,7 +77,7 @@ oc_project9_rag/
 │   ├── 01_openagenda_exploration.ipynb   # Exploration initiale des données OpenAgenda
 │   ├── 02_openagenda_preprocessing.ipynb # Pré-processing des événements collectés
 │   ├── 03_faiss_indexing.ipynb        # Exploration du chunking avant indexation
-│   └── 04_rag_evaluation.ipynb        # Visualisation du jeu annoté et des résultats d'évaluation
+│   └── 04_rag_evaluation.ipynb        # Visualisation du jeu annoté et des résultats d'évaluation (scores Ragas + métriques maison)
 ├── pyproject.toml                     # Configuration Poetry
 ├── README.md
 ├── scripts/                           # Scripts exécutables ponctuels
@@ -156,8 +157,8 @@ poetry run pytest --cov=echo_app --cov-report=term-missing
 Résultat :
 
 ```bash
-============================================================================ tests coverage ============================================================================
-__________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 ___________________________________________________________
+=============================================================================================================== tests coverage ===============================================================================================================
+_____________________________________________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 ______________________________________________________________________________________________
 
 Name                                         Stmts   Miss  Cover   Missing
 --------------------------------------------------------------------------
@@ -176,10 +177,11 @@ echo_app/indexing/search.py                     17      0   100%
 echo_app/rag/__init__.py                         4      0   100%
 echo_app/rag/langchain_chain.py                 12      0   100%
 echo_app/rag/prompts.py                          4      0   100%
-echo_app/rag/rag_service.py                     68      8    88%   49, 115-117, 129, 162-169
+echo_app/rag/rag_service.py                     74      8    89%   49, 115-117, 129, 177-184
+echo_app/rag/ragas_compat.py                     7      5    29%   26-33
 --------------------------------------------------------------------------
-TOTAL                                          467     54    88%
-========================================================================= 130 passed in 1.05s ==========================================================================
+TOTAL                                          480     59    88%
+============================================================================================================ 143 passed in 1.69s =============================================================================================================
 ```
 
 Structure des tests automatisés :
@@ -198,7 +200,7 @@ tests/
 ├── test_langchain_embeddings.py  # Adaptateur Mistral compatible LangChain
 ├── test_langchain_faiss_store.py # Vector store FAISS LangChain : build, save, load, retriever
 ├── test_preprocessing.py         # Filtrage, nettoyage et normalisation des événements
-├── test_rag_evaluation.py        # Fonctions de scoring et agrégation de l'évaluation RAG
+├── test_rag_evaluation.py        # Fonctions de scoring, agrégation et intégration Ragas de l'évaluation RAG
 ├── test_rag_prompts.py           # Prompts métier du chatbot Écho
 ├── test_rag_service.py           # Service RAG avec retrieval et génération mockés
 ├── test_rebuild_index.py         # Reconstruction du vector store FAISS LangChain
@@ -218,7 +220,7 @@ Les tests couvrent :
 - l'assemblage des messages LangChain sans appel réseau ;
 - la chaîne RAG avec recherche, construction du contexte et génération mockée ;
 - la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`) ;
-- les fonctions de calcul de l'évaluation RAG (scoring, agrégation), sans appel réseau.
+- les fonctions de calcul de l'évaluation RAG : scoring maison, préparation du dataset Ragas, fusion et agrégation des scores Ragas (mocks pandas, sans appel réseau).
 - l'API FastAPI (`/health`, `/ask`, `/rebuild`, validation et erreurs) sans appel réseau ;
 
 ## Pipeline OpenAgenda
@@ -318,13 +320,34 @@ poetry run python scripts/rebuild_index.py
 # Tester manuellement la chaîne RAG complète
 poetry run python scripts/07_test_rag_service.py
 
-# Évaluer le RAG sur le jeu annoté
+# Évaluer le RAG sur le jeu annoté (évaluation Ragas + métriques maison)
 poetry run python scripts/08_evaluate_rag.py
 ```
 
-Le jeu de test annoté et les derniers résultats d'évaluation sont versionnés dans [`data/evaluation/`](data/evaluation/).
+### Évaluation Ragas
 
-Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les principales métriques d'évaluation, sans relancer les appels Mistral.
+L'évaluation automatique du RAG repose désormais sur **[Ragas](https://docs.ragas.io/)** comme évaluation principale, en complément des métriques maison historiques :
+
+- **Métriques Ragas** (évaluation principale, LLM juge Mistral + `mistral-embed`) :
+  - `faithfulness` — fidélité de la réponse aux contextes utilisés ;
+  - `answer_relevancy` — pertinence de la réponse vis-à-vis de la question ;
+  - `context_precision` — qualité du retrieval (chunks pertinents en tête) ;
+  - `context_recall` — couverture du retrieval vis-à-vis de la réponse attendue.
+- **Métriques maison** (colonnes complémentaires, sans LLM juge) :
+  - `keyword_match_rate`, `event_recall`, `sources_count`, `status` (`ok` / `partial` / `ko`).
+
+Le script `scripts/08_evaluate_rag.py` rejoue les 15 questions du jeu annoté en deux étapes Mistral :
+
+1. **15 appels** au RAG pour générer les réponses (étape 1).
+2. **15 × 4 = 60 jobs Ragas** (étape 2), chaque job pouvant déclencher 1 ou 2 appels Mistral supplémentaires (LLM juge + embeddings) selon la métrique.
+
+Les sorties sont écrites dans `data/evaluation/rag_evaluation_results.csv` (détail) et `data/evaluation/rag_evaluation_summary.json` (résumé). La sortie console de la dernière exécution validée est conservée dans [`data/evaluation/rag_evaluation.log`](data/evaluation/rag_evaluation.log) pour pouvoir relire les logs étape par étape sans relancer les ~34 minutes d'évaluation. Le script n'est pas exécuté par pytest ni en CI : les tests unitaires mockent les fonctions d'évaluation.
+
+Le pipeline est volontairement minimal : `datasets.Dataset.from_dict` avec les colonnes `question`, `answer`, `contexts`, `ground_truth` + `ChatMistralAI` / `MistralAIEmbeddings` (langchain-mistralai) passés directement à `ragas.evaluate`. Le LLM juge Ragas utilise `mistral-large-latest` (plus fiable sur les schémas Pydantic des prompts legacy) alors que la chaîne RAG d'Écho continue d'utiliser `mistral-small-latest` côté production.
+
+> **Note technique** : la métrique `answer_relevancy` est instanciée avec `strictness=1` (au lieu de la valeur par défaut 3) pour contourner un bug d'agrégation entre `langchain-mistralai 1.1.4` et `n > 1` complétions. Une seule question alternative est donc générée par réponse pour le calcul de similarité — score légèrement moins robuste mais reproductible. Détail dans `docs/rapport_technique.md`.
+
+Le jeu de test annoté et les derniers résultats d'évaluation sont versionnés dans [`data/evaluation/`](data/evaluation/). Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ipynb) permet de visualiser le jeu annoté, les résultats générés et les métriques (Ragas + maison) sans relancer les appels Mistral.
 
 ## API FastAPI
 
