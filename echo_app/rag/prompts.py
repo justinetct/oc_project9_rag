@@ -5,7 +5,7 @@ Ce module centralise les prompts utilisés par RagService :
 - build_user_prompt : assemblage du message utilisateur (contexte + question).
 
 Les prompts sont isolés ici pour pouvoir être itérés indépendamment du code
-du service, et pour rester faciles à expliquer et à justifier en soutenance.
+du service, et pour rester faciles à expliquer et à justifier.
 """
 
 from __future__ import annotations

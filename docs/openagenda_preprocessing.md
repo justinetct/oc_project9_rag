@@ -146,7 +146,7 @@ Si `lastdate_end` est absent, le fallback est :
 1. `firstdate_end`
 2. `firstdate_begin`
 
-Ce choix évite d'indexer des événements déjà terminés et rend le POC reproductible pour les tests et la soutenance.
+Ce choix évite d'indexer des événements déjà terminés et rend le POC reproductible pour les tests et les démonstrations.
 
 ## 2. Nettoyage et normalisation
 

@@ -63,7 +63,7 @@ lastdate_end >= date'2026-05-01'
 
 Ce filtre conserve les événements encore actifs ou à venir à partir du 1er mai 2026.
 
-Il évite d’indexer des événements déjà terminés et rend le dataset reproductible pour le POC, les tests et la soutenance.
+Il évite d’indexer des événements déjà terminés et rend le dataset reproductible pour le POC, les tests et les démonstrations.
 
 En production, cette date figée pourrait être remplacée par une date dynamique.
 
