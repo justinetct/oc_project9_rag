@@ -66,56 +66,16 @@ Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d�
 
 ## 2. Architecture du système
 
-### Schéma d’architecture du système
+### Diagramme UML de composants
 
-Le schéma ci-dessous présente les principaux composants du système Écho. Il sépare le pipeline de préparation des données, l’indexation vectorielle, la couche RAG et l’API.
+Le diagramme regroupe les éléments du système Écho en quatre zones : l'application Écho (API, service RAG, retriever), le service externe de génération (Mistral LLM), l'index vectoriel (FAISS) et le pipeline de données (OpenAgenda → préparation → embeddings).
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ 1. Préparation des données                                          │
-│                                                                     │
-│ API OpenAgenda                                                      │
-│   → collecte des événements                                         │
-│   → filtrage géographique et temporel                               │
-│   → nettoyage et normalisation                                      │
-│   → documents Markdown                                              │
-│   → découpage en chunks                                             │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 2. Indexation vectorielle                                           │
-│                                                                     │
-│ Chunks d’événements                                                 │
-│   → embeddings Mistral avec mistral-embed                           │
-│   → vector store FAISS LangChain                                    │
-│   → sauvegarde locale dans vector_store/                            │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 3. Chaîne RAG                                                       │
-│                                                                     │
-│ Question utilisateur                                                │
-│   → retriever LangChain via as_retriever(search_kwargs={"k": 5})    │
-│   → récupération des documents pertinents                           │
-│   → construction du contexte                                        │
-│   → prompt LangChain avec ChatPromptTemplate                        │
-│   → génération Mistral avec mistral-small-latest                    │
-│   → réponse augmentée avec sources                                  │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 4. Exposition API                                                   │
-│                                                                     │
-│ Utilisateur final                                                   │
-│   → API FastAPI                                                     │
-│   → endpoints /health, /metadata, /ask, /rebuild                    │
-│   → /ask délègue à RagService.ask(question)                         │
-│   → réponse JSON : question, answer, sources                        │
-└─────────────────────────────────────────────────────────────────────┘
-```
+![Diagramme UML de composants — Écho](assets/architecture_uml_components.svg)
+
+Le diagramme se lit en deux flux :
+
+- **Flux question / réponse (en haut)** : l'utilisateur envoie une question HTTP à l'API FastAPI, qui délègue à `RagService`. Celui-ci appelle le `Retriever LangChain` (recherche FAISS, k=5) pour récupérer les chunks pertinents, puis transmet la question + contexte au `Mistral LLM` qui génère la réponse.
+- **Flux d'indexation (en bas)** : les événements OpenAgenda sont collectés puis préparés (filtrage, nettoyage, conversion en JSONL, chunking). Le composant `Préparation & indexation` utilise `Mistral Embeddings` pour vectoriser les chunks et alimente l'index FAISS.
 
 
 ### Données entrantes
