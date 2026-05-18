@@ -695,53 +695,100 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <p>Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.</p>
 <p>À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction du vector store FAISS LangChain, la recherche sémantique, la chaîne RAG (retriever FAISS LangChain + prompting LangChain + génération Mistral), l’API FastAPI et une première évaluation automatique sur un jeu de test annoté sont implémentés et testés.</p>
 <h2 id="2-architecture-du-systeme">2. Architecture du système</h2>
-<h3 id="schema-darchitecture-du-systeme">Schéma d’architecture du système</h3>
-<p>Le schéma ci-dessous présente les principaux composants du système Écho. Il sépare le pipeline de préparation des données, l’indexation vectorielle, la couche RAG et l’API.</p>
-<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────────┐
-│ 1. Préparation des données                                          │
-│                                                                     │
-│ API OpenAgenda                                                      │
-│   → collecte des événements                                         │
-│   → filtrage géographique et temporel                               │
-│   → nettoyage et normalisation                                      │
-│   → documents Markdown                                              │
-│   → découpage en chunks                                             │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 2. Indexation vectorielle                                           │
-│                                                                     │
-│ Chunks d’événements                                                 │
-│   → embeddings Mistral avec mistral-embed                           │
-│   → vector store FAISS LangChain                                    │
-│   → sauvegarde locale dans vector_store/                            │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 3. Chaîne RAG                                                       │
-│                                                                     │
-│ Question utilisateur                                                │
-│   → retriever LangChain via as_retriever(search_kwargs={&quot;k&quot;: 5})    │
-│   → récupération des documents pertinents                           │
-│   → construction du contexte                                        │
-│   → prompt LangChain avec ChatPromptTemplate                        │
-│   → génération Mistral avec mistral-small-latest                    │
-│   → réponse augmentée avec sources                                  │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ 4. Exposition API                                                   │
-│                                                                     │
-│ Utilisateur final                                                   │
-│   → API FastAPI                                                     │
-│   → endpoints /health, /metadata, /ask, /rebuild                    │
-│   → /ask délègue à RagService.ask(question)                         │
-│   → réponse JSON : question, answer, sources                        │
-└─────────────────────────────────────────────────────────────────────┘
-</code></pre></div>
+<h3 id="schema-darchitecture-du-systeme">Diagramme UML de composants</h3>
+<p>Le diagramme regroupe les éléments du système Écho en quatre zones : l’application Écho (API, service RAG, retriever), le service externe de génération (Mistral LLM), l’index vectoriel (FAISS) et le pipeline de données (OpenAgenda → préparation → embeddings).</p>
+
+<figure style="margin:16px 0 24px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 690" font-family="system-ui, -apple-system, 'Segoe UI', Inter, sans-serif" font-size="13" role="img" aria-labelledby="uml-title uml-desc" style="display:block;width:100%;height:auto;max-width:100%;">
+  <title id="uml-title">Diagramme UML de composants — Écho</title>
+  <desc id="uml-desc">Diagramme UML de composants simplifié du système RAG Écho.</desc>
+  <defs>
+    <marker id="uml-dep" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L12,6 L0,12" fill="none" stroke="#1F3D5C" stroke-width="1.3"/></marker>
+    <marker id="uml-dep-gold" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L12,6 L0,12" fill="none" stroke="#A07A30" stroke-width="1.3"/></marker>
+  </defs>
+  <rect x="0" y="0" width="1040" height="690" fill="#FFFFFF"/>
+  <text x="520" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#0E2A47">Diagramme UML de composants — Écho</text>
+  <g>
+    <circle cx="70" cy="130" r="11" fill="#FFFFFF" stroke="#0E2A47" stroke-width="1.5"/>
+    <line x1="70" y1="141" x2="70" y2="160" stroke="#0E2A47" stroke-width="1.5"/>
+    <line x1="58" y1="150" x2="82" y2="150" stroke="#0E2A47" stroke-width="1.5"/>
+    <line x1="70" y1="160" x2="62" y2="177" stroke="#0E2A47" stroke-width="1.5"/>
+    <line x1="70" y1="160" x2="78" y2="177" stroke="#0E2A47" stroke-width="1.5"/>
+    <text x="70" y="195" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="13">Utilisateur</text>
+  </g>
+  <rect x="220" y="96" width="720" height="134" fill="#F8FAFB" stroke="#1F3D5C" stroke-width="1.3"/>
+  <rect x="470" y="316" width="180" height="124" fill="#F8FAFB" stroke="#A07A30" stroke-width="1.3"/>
+  <rect x="700" y="316" width="180" height="124" fill="#F8FAFB" stroke="#1F3D5C" stroke-width="1.3"/>
+  <rect x="220" y="526" width="720" height="134" fill="#F8FAFB" stroke="#1F3D5C" stroke-width="1.3"/>
+  <g>
+    <rect x="260" y="120" width="160" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
+    <text x="340" y="158" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">API FastAPI</text>
+    <text x="340" y="180" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">HTTP /ask</text>
+  </g>
+  <g>
+    <rect x="480" y="120" width="160" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
+    <text x="560" y="158" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">RagService</text>
+    <text x="560" y="180" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">orchestration RAG</text>
+  </g>
+  <g>
+    <rect x="700" y="120" width="180" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
+    <text x="790" y="156" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="13">Retriever LangChain</text>
+    <text x="790" y="178" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">recherche k=5</text>
+  </g>
+  <g>
+    <rect x="480" y="340" width="160" height="80" rx="4" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
+    <text x="560" y="373" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">Mistral LLM</text>
+    <text x="560" y="395" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">génération</text>
+  </g>
+  <g>
+    <rect x="710" y="340" width="160" height="80" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
+    <text x="790" y="373" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">FAISS</text>
+    <text x="790" y="395" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">index vectoriel</text>
+  </g>
+  <g>
+    <rect x="260" y="550" width="160" height="90" rx="4" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
+    <text x="340" y="588" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">OpenAgenda</text>
+    <text x="340" y="610" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">événements</text>
+  </g>
+  <g>
+    <rect x="480" y="550" width="220" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
+    <text x="590" y="588" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">Préparation &amp; indexation</text>
+    <text x="590" y="610" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">JSONL → chunks</text>
+  </g>
+  <g>
+    <rect x="740" y="550" width="160" height="90" rx="4" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
+    <text x="820" y="588" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">Mistral Embeddings</text>
+    <text x="820" y="610" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">vectorisation</text>
+  </g>
+  <line x1="85" y1="145" x2="258" y2="145" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <line x1="258" y1="165" x2="85" y2="165" stroke="#A07A30" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep-gold)"/>
+  <line x1="422" y1="165" x2="478" y2="165" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <line x1="642" y1="165" x2="698" y2="165" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <line x1="560" y1="210" x2="560" y2="338" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <line x1="790" y1="210" x2="790" y2="338" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <line x1="422" y1="595" x2="478" y2="595" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <path d="M 590,550 L 590,485 L 790,485 L 790,422" fill="none" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <line x1="702" y1="595" x2="738" y2="595" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
+  <text x="171" y="135" text-anchor="middle" font-size="11" font-style="italic" fill="#1F3D5C">question</text>
+  <text x="171" y="182" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">réponse</text>
+  <text x="450" y="155" text-anchor="middle" font-size="11" font-style="italic" fill="#1F3D5C">utilise</text>
+  <text x="575" y="265" text-anchor="start" font-size="11" font-style="italic" fill="#1F3D5C">prompt + contexte</text>
+  <text x="805" y="265" text-anchor="start" font-size="11" font-style="italic" fill="#1F3D5C">recherche</text>
+  <text x="690" y="478" text-anchor="middle" font-size="11" font-style="italic" fill="#1F3D5C">indexation</text>
+  <rect x="220" y="70" width="190" height="26" fill="#E8F5F4" stroke="#1F3D5C" stroke-width="1.3"/>
+  <text x="235" y="88" font-size="13" font-weight="700" fill="#0E2A47">Application Écho</text>
+  <rect x="470" y="290" width="180" height="26" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
+  <text x="482" y="308" font-size="12" font-weight="700" fill="#0E2A47">Service de génération</text>
+  <rect x="700" y="290" width="180" height="26" fill="#E8F5F4" stroke="#1F3D5C" stroke-width="1.3"/>
+  <text x="715" y="308" font-size="13" font-weight="700" fill="#0E2A47">Index vectoriel</text>
+  <rect x="220" y="500" width="200" height="26" fill="#E8F5F4" stroke="#1F3D5C" stroke-width="1.3"/>
+  <text x="235" y="518" font-size="13" font-weight="700" fill="#0E2A47">Pipeline de données</text>
+</svg>
+</figure>
+
+<p><strong>Flux question / réponse (en haut)</strong> — l’utilisateur envoie une question HTTP à l’API FastAPI, qui délègue à <code>RagService</code> ; celui-ci appelle le <code>Retriever LangChain</code> (recherche FAISS, k=5) pour récupérer les chunks pertinents, puis transmet la question + contexte au <code>Mistral LLM</code> qui génère la réponse.</p>
+
+<p><strong>Flux d’indexation (en bas)</strong> — les événements OpenAgenda sont collectés puis préparés (filtrage, nettoyage, conversion en JSONL, chunking) ; le composant <code>Préparation &amp; indexation</code> utilise <code>Mistral Embeddings</code> pour vectoriser les chunks et alimente l’index FAISS.</p>
 
 <h3 id="donnees-entrantes">Données entrantes</h3>
 <p>Les données entrantes proviennent de l’API OpenAgenda via l’API Opendatasoft.</p>
