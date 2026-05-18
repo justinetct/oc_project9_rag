@@ -182,3 +182,55 @@ def test_constructor_rejects_invalid_top_k() -> None:
     """top_k doit rester strictement positif."""
     with pytest.raises(ValueError, match="strictement positif"):
         RagService(top_k=0)
+
+
+def test_ask_with_include_contexts_returns_raw_chunks(monkeypatch) -> None:
+    """include_contexts=True ajoute les page_content bruts pour Ragas."""
+
+    def fake_generate_answer(self, messages: list[dict]) -> str:
+        return "Réponse simulée par le mock."
+
+    monkeypatch.setattr(RagService, "_generate_answer", fake_generate_answer)
+
+    service = RagService(top_k=3)
+    service._retriever = FakeRetriever(documents=make_fake_documents())
+
+    response = service.ask(
+        "Quels événements d'astronomie ?", include_contexts=True
+    )
+
+    assert response["question"] == "Quels événements d'astronomie ?"
+    assert response["answer"] == "Réponse simulée par le mock."
+    assert "contexts" in response
+    assert response["contexts"] == [
+        "Soirée d'initiation à l'astronomie à Lanton.",
+        "Suite de la soirée astronomie : observation du ciel.",
+        "Concert acoustique à Andernos.",
+    ]
+
+
+def test_ask_with_include_contexts_empty_retrieval_returns_empty_list() -> None:
+    """include_contexts=True avec retriever vide doit produire contexts=[]."""
+    service = RagService()
+    service._retriever = FakeRetriever(documents=[])
+
+    response = service.ask("question hors sujet xyz", include_contexts=True)
+
+    assert response["sources"] == []
+    assert response["contexts"] == []
+
+
+def test_ask_default_does_not_expose_contexts(monkeypatch) -> None:
+    """Comportement par défaut inchangé : pas de clé `contexts` dans le dict."""
+
+    def fake_generate_answer(self, messages: list[dict]) -> str:
+        return "Réponse simulée par le mock."
+
+    monkeypatch.setattr(RagService, "_generate_answer", fake_generate_answer)
+
+    service = RagService(top_k=3)
+    service._retriever = FakeRetriever(documents=make_fake_documents())
+
+    response = service.ask("Quels événements d'astronomie ?")
+
+    assert set(response.keys()) == {"question", "answer", "sources"}

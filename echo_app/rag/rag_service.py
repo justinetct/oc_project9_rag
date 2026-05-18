@@ -128,29 +128,44 @@ class RagService:
         """
         self._retriever = None
 
-    def ask(self, question: str) -> dict:
-        """Répond à une question utilisateur via la chaîne RAG complète."""
+    def ask(self, question: str, *, include_contexts: bool = False) -> dict:
+        """Répond à une question utilisateur via la chaîne RAG complète.
+
+        Le paramètre ``include_contexts`` est réservé à l'évaluation
+        (script ``08_evaluate_rag.py``) : quand il vaut ``True``, le dict
+        retourné contient en plus une clé ``contexts`` listant le
+        ``page_content`` brut de chaque chunk retrouvé, sous la forme
+        attendue par Ragas. Par défaut (``False``), le comportement et le
+        schéma de retour sont strictement identiques à la version
+        précédente : l'API ``POST /ask`` n'est pas affectée.
+        """
         if not question or not str(question).strip():
             raise ValueError("La question est vide.")
 
         documents = self.retriever.invoke(question)
 
         if not documents:
-            return {
+            result = {
                 "question": question,
                 "answer": EMPTY_RESULT_ANSWER,
                 "sources": [],
             }
+            if include_contexts:
+                result["contexts"] = []
+            return result
 
         context = build_context(documents)
         messages = build_langchain_messages(question=question, context=context)
         answer = self._generate_answer(messages)
 
-        return {
+        result = {
             "question": question,
             "answer": answer,
             "sources": extract_sources(documents),
         }
+        if include_contexts:
+            result["contexts"] = [doc.page_content or "" for doc in documents]
+        return result
 
     def _generate_answer(self, messages: list[dict]) -> str:
         """Appelle Mistral pour générer la réponse à partir des messages.

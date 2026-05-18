@@ -9,6 +9,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT))
@@ -193,3 +195,325 @@ def test_summarize_results_handles_empty_list() -> None:
         "average_keyword_match_rate": 0.0,
         "average_event_recall": 0.0,
     }
+
+
+# --- Tests des nouvelles fonctions Ragas (sans appel réseau réel) ---
+
+
+class _FakeRagService:
+    """RagService factice : retourne une réponse pré-définie par question.
+
+    Imite le contrat de ``RagService.ask(q, include_contexts=...)`` sans
+    déclencher d'appel réseau. La séquence de réponses est fournie au
+    constructeur dans l'ordre attendu par le test.
+    """
+
+    def __init__(self, responses: list[dict]) -> None:
+        self._responses = list(responses)
+        self.calls: list[tuple[str, bool]] = []
+
+    def ask(self, question: str, *, include_contexts: bool = False) -> dict:
+        self.calls.append((question, include_contexts))
+        return self._responses.pop(0)
+
+
+def test_score_response_combines_custom_metrics() -> None:
+    """score_response doit combiner toutes les métriques maison et le status."""
+    row = {
+        "question": "Quels événements d'astronomie à Lanton ?",
+        "expected_answer": "Astronomie à Lanton.",
+        "expected_keywords": "astronomie;Lanton",
+        "expected_event_ids": "evt-1",
+        "comment": "thématique",
+    }
+    response = {
+        "question": "Quels événements d'astronomie à Lanton ?",
+        "answer": "Une initiation à l'astronomie à Lanton.",
+        "sources": [{"event_id": "evt-1", "title": "Astro"}],
+    }
+    result = evaluate_rag.score_response(row, response)
+
+    assert result["question"] == "Quels événements d'astronomie à Lanton ?"
+    assert result["generated_answer"] == "Une initiation à l'astronomie à Lanton."
+    assert result["expected_keywords"] == "astronomie;Lanton"
+    assert result["matched_keywords"] == "astronomie;Lanton"
+    assert result["keyword_match_rate"] == 1.0
+    assert result["expected_event_ids"] == "evt-1"
+    assert result["matched_event_ids"] == "evt-1"
+    assert result["event_recall"] == 1.0
+    assert result["sources_count"] == 1
+    assert result["status"] == "ok"
+    assert result["comment"] == "thématique"
+
+
+def test_run_rag_inference_calls_ask_with_include_contexts(capsys) -> None:
+    """run_rag_inference doit appeler ask(include_contexts=True) ligne par ligne."""
+    rows = [
+        {
+            "question": "Question A ?",
+            "expected_answer": "Réponse A attendue.",
+            "expected_keywords": "alpha",
+            "expected_event_ids": "evt-A",
+            "comment": "",
+        },
+        {
+            "question": "Question B ?",
+            "expected_answer": "",
+            "expected_keywords": "",
+            "expected_event_ids": "",
+            "comment": "hors sujet",
+        },
+    ]
+    responses = [
+        {
+            "question": "Question A ?",
+            "answer": "Réponse A générée.",
+            "sources": [{"event_id": "evt-A", "title": "A"}],
+            "contexts": ["chunk A1", "chunk A2"],
+        },
+        {
+            "question": "Question B ?",
+            "answer": "Je n'ai trouvé aucun événement.",
+            "sources": [],
+            "contexts": [],
+        },
+    ]
+    fake_service = _FakeRagService(responses=list(responses))
+
+    returned = evaluate_rag.run_rag_inference(rows, fake_service)
+
+    assert fake_service.calls == [("Question A ?", True), ("Question B ?", True)]
+    assert returned == responses
+
+    # Le log doit être lisible : chunks / sources / type de cas / status.
+    out = capsys.readouterr().out
+    assert "[1/2] Question A ?" in out
+    assert "chunks=2" in out
+    assert "sources=1" in out
+    assert "attendu=1 events" in out
+    assert "[2/2] Question B ?" in out
+    assert "attendu=hors-sujet" in out
+
+
+def test_build_ragas_dataset_matches_course_columns() -> None:
+    """Le dataset doit exposer les 4 colonnes Ragas attendues."""
+    rows = [
+        {
+            "question": "Question A ?",
+            "expected_answer": "Réponse A attendue.",
+            "expected_keywords": "alpha",
+            "expected_event_ids": "evt-A",
+            "comment": "",
+        },
+    ]
+    responses = [
+        {
+            "answer": "Réponse A générée.",
+            "sources": [{"event_id": "evt-A"}],
+            "contexts": ["chunk A1", "chunk A2"],
+        }
+    ]
+
+    dataset = evaluate_rag.build_ragas_dataset(rows, responses)
+
+    assert set(dataset.column_names) == {"question", "answer", "contexts", "ground_truth"}
+    assert dataset[0] == {
+        "question": "Question A ?",
+        "answer": "Réponse A générée.",
+        "contexts": ["chunk A1", "chunk A2"],
+        "ground_truth": "Réponse A attendue.",
+    }
+
+
+def test_merge_scores_aligns_and_rounds_ragas_columns() -> None:
+    """merge_scores doit joindre les scores Ragas ligne à ligne et arrondir."""
+    import pandas as pd
+
+    custom_results = [
+        {"question": "Q1", "keyword_match_rate": 1.0, "event_recall": 1.0, "status": "ok"},
+        {"question": "Q2", "keyword_match_rate": 0.5, "event_recall": 0.5, "status": "partial"},
+    ]
+    ragas_df = pd.DataFrame(
+        [
+            {
+                "faithfulness": 0.9123,
+                "answer_relevancy": 0.8567,
+                "context_precision": 0.7,
+                "context_recall": 1.0,
+            },
+            {
+                "faithfulness": 0.4321,
+                "answer_relevancy": 0.5,
+                "context_precision": 0.5,
+                "context_recall": 0.5,
+            },
+        ]
+    )
+
+    merged = evaluate_rag.merge_scores(custom_results, ragas_df)
+
+    assert merged[0]["faithfulness"] == 0.912
+    assert merged[0]["answer_relevancy"] == 0.857
+    assert merged[0]["context_precision"] == 0.7
+    assert merged[0]["context_recall"] == 1.0
+    # Les champs maison sont préservés
+    assert merged[0]["question"] == "Q1"
+    assert merged[0]["status"] == "ok"
+    # Deuxième ligne
+    assert merged[1]["faithfulness"] == 0.432
+    assert merged[1]["answer_relevancy"] == 0.5
+
+
+def test_merge_scores_serializes_nan_as_none() -> None:
+    """Les NaN Ragas doivent être sérialisés en None pour produire un CSV vide."""
+    import pandas as pd
+
+    custom_results = [{"question": "Q1", "status": "partial"}]
+    ragas_df = pd.DataFrame(
+        [
+            {
+                "faithfulness": 0.5,
+                "answer_relevancy": 0.5,
+                "context_precision": float("nan"),
+                "context_recall": float("nan"),
+            }
+        ]
+    )
+
+    merged = evaluate_rag.merge_scores(custom_results, ragas_df)
+
+    assert merged[0]["faithfulness"] == 0.5
+    assert merged[0]["answer_relevancy"] == 0.5
+    assert merged[0]["context_precision"] is None
+    assert merged[0]["context_recall"] is None
+
+
+def test_merge_scores_raises_on_length_mismatch() -> None:
+    """Un désaccord sur le nombre de lignes doit lever ValueError."""
+    import pandas as pd
+
+    with pytest.raises(ValueError, match="Désaccord d'ordre"):
+        evaluate_rag.merge_scores(
+            [{"question": "Q1"}],
+            pd.DataFrame([{"faithfulness": 0.5}, {"faithfulness": 0.4}]),
+        )
+
+
+def test_summarize_ragas_results_counts_and_averages_both_families() -> None:
+    """summarize_ragas_results agrège status + moyennes maison ET Ragas."""
+    results = [
+        {
+            "status": "ok",
+            "keyword_match_rate": 1.0,
+            "event_recall": 1.0,
+            "faithfulness": 0.9,
+            "answer_relevancy": 0.8,
+            "context_precision": 0.7,
+            "context_recall": 1.0,
+        },
+        {
+            "status": "partial",
+            "keyword_match_rate": 0.5,
+            "event_recall": 0.5,
+            "faithfulness": 0.5,
+            "answer_relevancy": 0.6,
+            "context_precision": 0.5,
+            "context_recall": 0.5,
+        },
+    ]
+    summary = evaluate_rag.summarize_ragas_results(results)
+
+    assert summary["total"] == 2
+    assert summary["ok"] == 1
+    assert summary["partial"] == 1
+    assert summary["ko"] == 0
+    assert summary["average_keyword_match_rate"] == 0.75
+    assert summary["average_event_recall"] == 0.75
+    assert summary["average_faithfulness"] == 0.7
+    assert summary["average_answer_relevancy"] == 0.7
+    assert summary["average_context_precision"] == 0.6
+    assert summary["average_context_recall"] == 0.75
+
+
+def test_summarize_ragas_results_ignores_none_in_averages() -> None:
+    """Les valeurs None doivent être exclues du calcul de moyenne."""
+    results = [
+        {
+            "status": "ok",
+            "keyword_match_rate": 1.0,
+            "event_recall": 1.0,
+            "faithfulness": 1.0,
+            "answer_relevancy": 1.0,
+            "context_precision": 1.0,
+            "context_recall": None,  # cas hors sujet
+        },
+        {
+            "status": "ok",
+            "keyword_match_rate": 1.0,
+            "event_recall": 1.0,
+            "faithfulness": 0.5,
+            "answer_relevancy": 0.5,
+            "context_precision": 0.5,
+            "context_recall": 0.5,
+        },
+    ]
+    summary = evaluate_rag.summarize_ragas_results(results)
+
+    # context_recall moyen = moyenne sur 1 valeur seulement
+    assert summary["average_context_recall"] == 0.5
+    assert summary["average_faithfulness"] == 0.75
+
+
+def test_summarize_ragas_results_returns_none_when_all_missing() -> None:
+    """Si toutes les valeurs d'une métrique sont absentes, la moyenne est None.
+
+    Évite la lecture trompeuse "moyenne = 0.0 = très mauvais score" quand
+    la métrique a en réalité systématiquement échoué (bug Ragas, rate
+    limit Mistral, etc.).
+    """
+    results = [
+        {
+            "status": "ok",
+            "keyword_match_rate": 1.0,
+            "event_recall": 1.0,
+            "faithfulness": 1.0,
+            "answer_relevancy": None,
+            "context_precision": 1.0,
+            "context_recall": 1.0,
+        },
+        {
+            "status": "ok",
+            "keyword_match_rate": 0.5,
+            "event_recall": 0.5,
+            "faithfulness": 0.5,
+            "answer_relevancy": None,
+            "context_precision": 0.5,
+            "context_recall": 0.5,
+        },
+    ]
+    summary = evaluate_rag.summarize_ragas_results(results)
+
+    assert summary["average_answer_relevancy"] is None
+    assert summary["average_faithfulness"] == 0.75
+
+
+def test_result_columns_match_spec() -> None:
+    """Gel du contrat CSV : ordre exact des colonnes."""
+    assert evaluate_rag.RESULT_COLUMNS == [
+        "question",
+        "expected_answer",
+        "generated_answer",
+        "expected_keywords",
+        "matched_keywords",
+        "keyword_match_rate",
+        "expected_event_ids",
+        "matched_event_ids",
+        "event_recall",
+        "sources_count",
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall",
+        "status",
+        "comment",
+    ]
