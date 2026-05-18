@@ -3,11 +3,14 @@
 
 > Écho est le chatbot culturel développé par Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
+📄 **[Rapport technique HTML](https://justinetct.github.io/oc_project9_rag/rapport_technique.html)**
+
 ## Objectif
 
 Concevoir un système RAG capable de répondre à des questions à partir d’événements collectés via OpenAgenda.
 
 Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents sont ensuite découpés, transformés en embeddings, indexés avec FAISS via LangChain et utilisés par le chatbot Écho pour générer des réponses contextualisées.
+
 
 ## Sommaire
 
@@ -45,9 +48,7 @@ Les documents techniques sont regroupés dans [`docs/`](docs/) :
 | [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md) | Pipeline de collecte, filtrage, nettoyage et construction des documents textuels. |
 | [`docs/faiss_indexing.md`](docs/faiss_indexing.md) | Stratégie de chunking, embeddings Mistral, index FAISS et recherche sémantique. |
 | [`docs/rapport_technique.md`](docs/rapport_technique.md) | Rapport technique du POC : architecture, RAG, évaluation, limites et perspectives. |
-| [`docs/rapport_technique.html`](docs/rapport_technique.html) | Version HTML stylée du rapport technique, à ouvrir dans un navigateur. |
-
-## Structure du projet
+| [Rapport technique HTML](https://justinetct.github.io/oc_project9_rag/rapport_technique.html) | Version HTML du rapport technique, publiée via GitHub Pages. |## Structure du projet
 
 ```text
 oc_project9_rag/
