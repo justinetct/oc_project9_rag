@@ -1,0 +1,41 @@
+# Secrets : ne jamais embarquer dans l'image.
+.env
+.env.*
+!.env.example
+
+# Git & metadata.
+.git
+.gitignore
+.gitattributes
+
+# Environnements Python locaux.
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+
+# Caches & coverage.
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# IDE / OS.
+.idea
+.vscode
+.DS_Store
+
+# Données et artefacts non nécessaires au runtime de l'API.
+data/raw
+data/evaluation
+notebooks
+docs
+tests
+scripts
+
+# Sous-dossiers .claude.
+.claude

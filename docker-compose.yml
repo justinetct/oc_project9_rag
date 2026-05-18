@@ -1,0 +1,23 @@
+# Docker Compose local pour le POC Écho (RAG).
+#
+# Un seul service : l'API FastAPI exposée sur le port 8000.
+# - Les secrets viennent du fichier .env local (non versionné).
+# - Le vector store FAISS et les documents préparés sont montés en
+#   lecture seule depuis le dépôt local pour pouvoir mettre à jour
+#   l'index sans rebuild de l'image.
+
+services:
+  api:
+    build: .
+    image: echo-rag-api
+    container_name: echo-rag-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # vector_store doit rester accessible en écriture pour permettre à
+      # POST /rebuild de réécrire l'index FAISS depuis le conteneur.
+      - ./vector_store:/app/vector_store
+      # Documents préparés en entrée pour /rebuild : lecture seule suffit.
+      - ./data/processed:/app/data/processed:ro

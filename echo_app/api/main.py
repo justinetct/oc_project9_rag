@@ -25,7 +25,9 @@ Documentation Swagger : http://127.0.0.1:8000/docs
 
 from __future__ import annotations
 
+import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -56,6 +58,19 @@ from src.config import PATHS
 
 EMBEDDING_MODEL_NAME = os.getenv("MISTRAL_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
 GENERATION_MODEL_NAME = MISTRAL_MODEL
+
+
+# On utilise le logger Uvicorn déjà configuré pour que ces messages
+# apparaissent dans la même stream que les logs serveur (utile en Docker).
+logger = logging.getLogger("uvicorn.error")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Affiche les URL utiles pour la démo locale au démarrage."""
+    logger.info("Écho API prête : http://127.0.0.1:8000/docs")
+    logger.info("Health check : http://127.0.0.1:8000/health")
+    yield
 
 
 API_DESCRIPTION = """
@@ -93,6 +108,7 @@ app = FastAPI(
     title="Écho - API RAG",
     description=API_DESCRIPTION,
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 rag_service = RagService()

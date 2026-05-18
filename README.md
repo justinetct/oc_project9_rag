@@ -26,6 +26,7 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
 - [Préparation des documents pour l'indexation](#préparation-des-documents-pour-lindexation)
 - [Chaîne RAG](#chaîne-rag)
 - [API FastAPI](#api-fastapi)
+- [Docker](#docker)
 
 ## Stack technique
 
@@ -37,6 +38,7 @@ L'application s'appuiera notamment sur :
 - FAISS via LangChain pour l'index vectoriel et la recherche sémantique
 - Mistral AI pour les embeddings et le modèle de langage
 - FastAPI pour l'exposition d'une API
+- Docker / Docker Compose pour le déploiement local reproductible de l'API
 
 ## Documentation
 
@@ -48,11 +50,16 @@ Les documents techniques sont regroupés dans [`docs/`](docs/) :
 | [`docs/openagenda_preprocessing.md`](docs/openagenda_preprocessing.md) | Pipeline de collecte, filtrage, nettoyage et construction des documents textuels. |
 | [`docs/faiss_indexing.md`](docs/faiss_indexing.md) | Stratégie de chunking, embeddings Mistral, index FAISS et recherche sémantique. |
 | [`docs/rapport_technique.md`](docs/rapport_technique.md) | Rapport technique du POC : architecture, RAG, évaluation, limites et perspectives. |
-| [Rapport technique HTML](https://justinetct.github.io/oc_project9_rag/rapport_technique.html) | Version HTML du rapport technique, publiée via GitHub Pages. |## Structure du projet
+| [Rapport technique HTML](https://justinetct.github.io/oc_project9_rag/rapport_technique.html) | Version HTML du rapport technique, publiée via GitHub Pages. |
+
+## Structure du projet
 
 ```text
 oc_project9_rag/
+├── .dockerignore                      # Fichiers exclus du build Docker
 ├── .env.example                       # Exemple de variables d'environnement
+├── Dockerfile                         # Image Docker de l'API FastAPI
+├── docker-compose.yml                 # Lancement local de l'API via Docker Compose
 ├── data/                              # Données du projet
 │   ├── evaluation/                    # Jeux de données utilisés pour évaluer le RAG
 │   ├── processed/                     # Données nettoyées ou transformées
@@ -404,3 +411,61 @@ Le rebuild réel est optionnel, car il peut déclencher des appels Mistral :
 ```bash
 poetry run python scripts/api_test.py --with-rebuild
 ```
+
+## Docker
+
+L'API FastAPI peut être lancée dans un environnement reproductible via Docker. L'image utilise Python 3.12 slim, installe les dépendances avec Poetry et démarre Uvicorn sur le port 8000.
+
+### Prérequis
+
+- Docker et Docker Compose installés localement.
+- Fichier `.env` présent à la racine avec la clé `MISTRAL_API_KEY` (voir [Variables d'environnement](#variables-denvironnement)). Les secrets ne sont jamais embarqués dans l'image.
+- Index FAISS déjà construit localement dans `vector_store/` :
+
+```bash
+poetry run python scripts/rebuild_index.py
+```
+
+### Build de l'image
+
+```bash
+docker build -t oc-project9-rag-api .
+```
+
+### Lancement avec Docker
+
+```bash
+docker run --rm --env-file .env -p 8000:8000 oc-project9-rag-api
+```
+
+Le conteneur charge l'index FAISS embarqué au premier `POST /ask` : il n'est pas reconstruit au démarrage.
+
+### Lancement avec Docker Compose
+
+Docker Compose simplifie le lancement local et monte les dossiers `vector_store/` et `data/processed/` depuis le dépôt, ce qui permet de rebuilder l'index localement sans reconstruire l'image :
+
+```bash
+docker compose up --build
+```
+
+Pour arrêter le service :
+
+```bash
+docker compose down
+```
+
+### Tests rapides
+
+Une fois l'API démarrée, vérifier que tout répond :
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Et ouvrir la documentation Swagger dans un navigateur :
+
+<http://127.0.0.1:8000/docs>
+
+### Note sur /rebuild
+
+L'endpoint `POST /rebuild` est utile en POC local pour reconstruire l'index FAISS depuis le conteneur (il déclenche des appels Mistral). En production, il devrait être protégé (authentification, rôle dédié) ou remplacé par une tâche planifiée hors du chemin HTTP public.
