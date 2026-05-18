@@ -43,6 +43,7 @@ data/evaluation/*
 !data/evaluation/qa_annotated.csv
 !data/evaluation/rag_evaluation_results.csv
 !data/evaluation/rag_evaluation_summary.json
+!data/evaluation/rag_evaluation.log
 
 # Vector store files
 vector_store/*
