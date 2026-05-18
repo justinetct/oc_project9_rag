@@ -77,14 +77,29 @@ def client(fake_service):
 # ---------------------------------------------------------------------------
 
 
-def test_health_returns_enriched_payload_with_metadata(
-    client, monkeypatch, tmp_path
-):
-    """GET /health retourne tous les champs enrichis quand l'index et la
-    metadata existent."""
+def test_health_returns_minimal_payload(client):
+    """GET /health retourne strictement status, service, rag_service_ready."""
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "service": "echo-rag-api",
+        "rag_service_ready": True,
+    }
+
+
+# ---------------------------------------------------------------------------
+# GET /metadata
+# ---------------------------------------------------------------------------
+
+
+def test_metadata_returns_expected_fields(client, monkeypatch, tmp_path):
+    """GET /metadata retourne tous les champs techniques attendus quand
+    l'index et la metadata existent."""
     (tmp_path / "index.faiss").write_text("", encoding="utf-8")
     (tmp_path / "index.pkl").write_text("", encoding="utf-8")
-    # On force /health à lire un dossier temporaire contrôlé par le test.
+    # On force /metadata à lire un dossier temporaire contrôlé par le test.
     monkeypatch.setattr(api_main, "_resolve_vector_store_dir", lambda: tmp_path)
     # On simule une metadata de rebuild déjà présente.
     monkeypatch.setattr(
@@ -95,57 +110,61 @@ def test_health_returns_enriched_payload_with_metadata(
             "last_rebuild_at": "2026-05-13T15:42:00Z",
         },
     )
+    # Noms de modèles déterministes pour le test (les vraies valeurs peuvent
+    # varier selon l'environnement).
+    monkeypatch.setattr(api_main, "EMBEDDING_MODEL_NAME", "mistral-embed")
+    monkeypatch.setattr(api_main, "GENERATION_MODEL_NAME", "mistral-small-latest")
 
-    response = client.get("/health")
+    response = client.get("/metadata")
 
     assert response.status_code == 200
     assert response.json() == {
-        "status": "ok",
         "service": "echo-rag-api",
         "rag_service_ready": True,
         "vector_store_available": True,
         "chunks_count": 155,
         "top_k_default": 5,
         "last_rebuild_at": "2026-05-13T15:42:00Z",
+        "embedding_model": "mistral-embed",
+        "generation_model": "mistral-small-latest",
     }
 
 
-def test_health_returns_safe_defaults_when_vector_store_absent(
+def test_metadata_safe_defaults_when_vector_store_absent(
     client, monkeypatch, tmp_path
 ):
-    """GET /health retourne des valeurs sûres en environnement neuf."""
+    """GET /metadata retourne des valeurs sûres en environnement neuf."""
     # On pointe vers un dossier vide pour simuler un environnement neuf.
     monkeypatch.setattr(api_main, "_resolve_vector_store_dir", lambda: tmp_path)
     # On simule l'absence de metadata de rebuild.
     monkeypatch.setattr(api_main, "read_rebuild_metadata", lambda _dir: None)
 
-    response = client.get("/health")
+    response = client.get("/metadata")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "ok",
-        "service": "echo-rag-api",
-        "rag_service_ready": True,
-        "vector_store_available": False,
-        "chunks_count": None,
-        "top_k_default": 5,
-        "last_rebuild_at": None,
-    }
+    body = response.json()
+    assert body["service"] == "echo-rag-api"
+    assert body["rag_service_ready"] is True
+    assert body["vector_store_available"] is False
+    assert body["chunks_count"] is None
+    assert body["top_k_default"] == 5
+    assert body["last_rebuild_at"] is None
+    # Les noms de modèles restent toujours présents (lus depuis la config).
+    assert isinstance(body["embedding_model"], str)
+    assert isinstance(body["generation_model"], str)
 
 
-def test_health_falls_back_to_index_mtime_when_metadata_missing(
+def test_metadata_falls_back_to_index_mtime_when_metadata_missing(
     client, monkeypatch, tmp_path
 ):
     """Sans rebuild_metadata.json, last_rebuild_at provient du mtime de
     index.faiss."""
     (tmp_path / "index.faiss").write_text("", encoding="utf-8")
     (tmp_path / "index.pkl").write_text("", encoding="utf-8")
-    # On utilise un vector_store temporaire avec index.faiss et index.pkl.
     monkeypatch.setattr(api_main, "_resolve_vector_store_dir", lambda: tmp_path)
-    # On force le fallback sur le mtime de index.faiss.
     monkeypatch.setattr(api_main, "read_rebuild_metadata", lambda _dir: None)
 
-    response = client.get("/health")
+    response = client.get("/metadata")
 
     assert response.status_code == 200
     body = response.json()
@@ -155,36 +174,48 @@ def test_health_falls_back_to_index_mtime_when_metadata_missing(
     assert body["last_rebuild_at"].endswith("Z")
 
 
-def test_health_does_not_load_vector_store(client, monkeypatch):
-    """Garde-fou : /health ne charge jamais le vector store FAISS."""
+def test_metadata_includes_model_names(client):
+    """GET /metadata expose des noms de modèles non vides (jamais une clé API)."""
+    response = client.get("/metadata")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["embedding_model"]
+    assert body["generation_model"]
+    # Garde-fou : aucune clé API ne doit fuiter dans la réponse.
+    serialized = response.text.lower()
+    assert "api_key" not in serialized
+    assert "mistral_api_key" not in serialized
+
+
+def test_metadata_does_not_load_vector_store(client, monkeypatch):
+    """Garde-fou : /metadata ne charge jamais le vector store FAISS."""
 
     def _boom(*_args, **_kwargs):
         raise AssertionError("Le vector store FAISS ne doit pas être chargé.")
 
-    # Si /health charge FAISS par erreur, le test échoue.
     monkeypatch.setattr(
         "echo_app.indexing.langchain_faiss_store.load_langchain_vector_store",
         _boom,
     )
 
-    response = client.get("/health")
+    response = client.get("/metadata")
 
     assert response.status_code == 200
 
 
-def test_health_does_not_call_mistral(client, monkeypatch):
-    """Garde-fou : /health n'instancie aucun client Mistral."""
+def test_metadata_does_not_call_mistral(client, monkeypatch):
+    """Garde-fou : /metadata n'instancie aucun client Mistral."""
 
     def _boom(*_args, **_kwargs):
         raise AssertionError("Le client Mistral ne doit pas être appelé.")
 
-    # Si /health instancie Mistral par erreur, le test échoue.
     monkeypatch.setattr(
         "echo_app.indexing.embeddings.get_mistral_client",
         _boom,
     )
 
-    response = client.get("/health")
+    response = client.get("/metadata")
 
     assert response.status_code == 200
 

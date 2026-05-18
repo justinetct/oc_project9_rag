@@ -62,7 +62,7 @@ Le périmètre du POC est volontairement limité afin de rester simple et maîtr
 
 Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
 
-À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction du vector store FAISS LangChain, la recherche sémantique, la chaîne RAG (retriever FAISS LangChain + prompting LangChain + génération Mistral) et une évaluation automatique simple sur un jeu de test annoté sont implémentés et testés. Seule l’API finale reste à compléter dans les étapes suivantes.
+À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction du vector store FAISS LangChain, la recherche sémantique, la chaîne RAG (retriever FAISS LangChain + prompting LangChain + génération Mistral), l’API FastAPI et une première évaluation automatique sur un jeu de test annoté sont implémentés et testés.
 
 ## 2. Architecture du système
 
@@ -111,8 +111,8 @@ Le schéma ci-dessous présente les principaux composants du système Écho. Il 
 │                                                                     │
 │ Utilisateur final                                                   │
 │   → API FastAPI                                                     │
-│   → endpoint POST /ask                                              │
-│   → RagService.ask(question)                                        │
+│   → endpoints /health, /metadata, /ask, /rebuild                    │
+│   → /ask délègue à RagService.ask(question)                         │
 │   → réponse JSON : question, answer, sources                        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -162,15 +162,22 @@ Le modèle de génération utilisé est `mistral-small-latest`, configurable via
 
 ### Exposition via API
 
-L’exposition via API sera réalisée avec FastAPI.
+L’API FastAPI est implémentée dans [`echo_app/api/`](../echo_app/api/) et expose quatre endpoints :
 
-L’API cible devra permettre notamment :
+- `GET /health` : vérifie que l’API répond (statut minimal, sans I/O) ;
+- `GET /metadata` : expose l’état du système RAG et du vector store (chunks indexés, disponibilité de l’index, noms des modèles Mistral) sans secret ;
+- `POST /ask` : pose une question au système et retourne `{question, answer, sources}` ; délègue à `RagService.ask()` ;
+- `POST /rebuild` : reconstruit localement l’index FAISS, sous condition de `confirm=true`.
 
-- de poser une question au système ;
-- de récupérer une réponse générée ;
-- de reconstruire l’index si nécessaire.
+La logique RAG reste isolée dans `echo_app/rag/rag_service.py` ; la couche API se contente d’appeler `RagService.ask()`. La reconstruction de l’index est portée par `echo_app.indexing.rebuild.rebuild_index()`, partagée entre `scripts/rebuild_index.py` (CLI) et `POST /rebuild` (API).
 
-Cette partie sera complétée dans une étape ultérieure.
+Performance : l’index FAISS est chargé en mémoire une seule fois (lazy au premier `/ask`) puis conservé en cache. Le cache n’est invalidé qu’après un `/rebuild` réussi.
+
+Documentation interactive : Swagger sur `/docs`, généré automatiquement par FastAPI.
+
+Un script fonctionnel [`scripts/api_test.py`](../scripts/api_test.py) permet de vérifier rapidement une API déjà lancée : `/health`, `/metadata`, `/ask` (question simple) et `/rebuild` (refus sans confirmation). Il n’est pas exécuté par pytest et n’appelle pas Mistral coûteusement par défaut.
+
+`POST /rebuild` est documenté comme endpoint POC. En production réelle, il devrait être protégé (authentification, rôle dédié) ou remplacé par une tâche planifiée hors du chemin HTTP.
 
 ### Technologies utilisées
 
@@ -182,7 +189,7 @@ Les principales technologies utilisées sont :
 - pandas pour l’exploration et la préparation des données ;
 - Mistral AI pour les embeddings et la génération de réponse ;
 - FAISS via LangChain pour l’index vectoriel et la recherche sémantique ;
-- FastAPI pour l’API cible ;
+- FastAPI pour l’API locale ;
 - pytest pour les tests automatisés ;
 - ruff pour la qualité du code.
 
@@ -444,30 +451,32 @@ Cette reconstruction est utile lorsque les données changent ou lorsque la strat
 
 ### Framework utilisé
 
-L’API cible du projet est prévue avec FastAPI.
+L’API du projet est implémentée avec FastAPI, dans le dossier [`echo_app/api/`](../echo_app/api/).
 
-FastAPI est adapté au POC car il permet de créer rapidement une API Python typée, documentée automatiquement et facile à tester.
+FastAPI est adapté au POC car il permet de créer rapidement une API Python typée, documentée automatiquement via Swagger et facile à tester avec `TestClient`.
 
-### Endpoints cibles
+### Endpoints exposés
 
-Les endpoints finaux seront complétés dans la suite du projet.
+L’API expose quatre endpoints principaux :
 
-Les endpoints prévus sont :
+| Endpoint | Rôle |
+|---|---|
+| `GET /health` | Vérifie que l’API répond avec un statut minimal. |
+| `GET /metadata` | Expose des informations techniques non sensibles sur le système RAG : disponibilité du vector store, nombre de chunks, modèles utilisés, dernier rebuild. |
+| `POST /ask` | Reçoit une question utilisateur et retourne une réponse générée avec ses sources. |
+| `POST /rebuild` | Reconstruit localement l’index FAISS avec une confirmation explicite (`confirm=true`). |
 
-```text
-POST /ask
-POST /rebuild
-```
+La documentation interactive Swagger est générée automatiquement par FastAPI et disponible sur `/docs` lorsque l’API est lancée localement.
 
-`/ask` permettra d’envoyer une question utilisateur et de récupérer une réponse du système RAG.
+### Séparation API / logique métier
 
-`/rebuild` pourra éventuellement servir à reconstruire l’index vectoriel si nécessaire.
+La couche API ne réimplémente pas la logique RAG. L’endpoint `POST /ask` appelle directement `RagService.ask(question)`, qui orchestre le retriever FAISS LangChain, la construction du contexte, le prompt LangChain et l’appel Mistral.
 
-À ce stade du projet, la recherche sémantique et la chaîne RAG sont disponibles côté code via la classe `RagService`, mais l’API HTTP n’est pas encore finalisée. L’endpoint `/ask` consommera directement `RagService.ask()` lors de l’étape suivante.
+La reconstruction de l’index est portée par `echo_app.indexing.rebuild.rebuild_index()`. Cette fonction est utilisée à la fois par le script CLI `scripts/rebuild_index.py` et par l’endpoint `POST /rebuild`, ce qui évite de dupliquer la logique.
 
-### Format cible des requêtes et réponses
+### Format des requêtes et réponses
 
-Format cible pour `/ask` :
+Exemple de requête pour `/ask` :
 
 ```json
 {
@@ -475,46 +484,44 @@ Format cible pour `/ask` :
 }
 ```
 
-Format cible de réponse :
+Exemple de réponse :
 
 ```json
 {
+  "question": "Quels événements autour de l’astronomie sont disponibles ?",
   "answer": "...",
   "sources": [
     {
+      "event_id": "13708573",
       "title": "Initiation à l'astronomie à Lanton",
       "city": "Lanton",
+      "start_date": "2026-01-05T19:30:00+00:00",
       "url": "https://openagenda.com/..."
     }
   ]
 }
 ```
 
-Ce format pourra évoluer lors de l’implémentation finale de l’API.
+`GET /metadata` n’expose pas de clé API ni de chemin local absolu. Les noms de modèles (`mistral-embed`, `mistral-small-latest`) sont des informations techniques non sensibles.
 
 ### Tests et gestion des erreurs
 
-Les tests automatisés déjà en place couvrent :
+Les tests API sont regroupés dans `tests/test_api.py`. Ils utilisent `TestClient` et des fakes pour éviter tout appel réel à Mistral ou tout chargement réel de FAISS pendant les tests unitaires.
 
-- les imports principaux ;
-- les fonctions d’entrée / sortie ;
-- le nettoyage et le pré-processing OpenAgenda ;
-- la construction des documents RAG ;
-- le chunking ;
-- les embeddings avec mocks ;
-- la construction et le chargement du vector store FAISS ;
-- la recherche sémantique avec mocks ;
-- la chaîne RAG : construction du contexte numéroté, dédoublonnage des sources, court-circuit sur résultats vides et validation des arguments, le tout sans appel réseau ;
-- les prompts métier : présence des règles essentielles dans le prompt système et format du prompt utilisateur (contexte avant question, libellés explicites) ;
-- l'assemblage LangChain : structure du résultat de `build_langchain_messages` (deux messages, rôles `system` puis `user`, format dict compatible Mistral, contenus correctement injectés).
+Les principaux comportements testés sont :
 
-Les cas d’erreur déjà testés incluent notamment :
+- `/health` retourne un statut minimal ;
+- `/metadata` retourne les informations techniques attendues sans appel Mistral ni chargement FAISS ;
+- `/ask` délègue bien à `RagService.ask()` ;
+- une question vide ou composée uniquement d’espaces retourne une erreur claire ;
+- `/rebuild` refuse une reconstruction sans `confirm=true` ;
+- une erreur inattendue pendant `/ask` ou `/rebuild` retourne une erreur générique sans exposer de trace Python.
 
-- requête vide ;
-- `top_k` invalide ;
-- vector store manquant ;
-- embeddings vides ;
-- dimension d’embedding incohérente.
+Un script fonctionnel manuel [`scripts/api_test.py`](../scripts/api_test.py) permet également de tester une API déjà lancée localement. Par défaut, il vérifie `/health`, `/metadata`, `/ask` et le refus de `/rebuild` sans confirmation. Le rebuild réel est optionnel afin d’éviter des appels Mistral coûteux pendant un test rapide.
+
+### Limites de l’API
+
+`POST /rebuild` est un endpoint utile pour le POC local, mais il est sensible : il peut reconstruire l’index, déclencher des appels embeddings et invalider le cache du retriever. En production, il devrait être protégé par une authentification, limité à un rôle administrateur ou remplacé par une tâche interne planifiée hors du chemin HTTP public.
 
 ## 7. Évaluation du système
 
@@ -684,7 +691,7 @@ Cette première version présente plusieurs limites :
 - la recherche sémantique brute ne gère pas encore parfaitement les requêtes composées ;
 - les filtres métier par date, commune ou gratuité ne sont pas encore appliqués directement ;
 - l’index doit être reconstruit lorsque les données changent ;
-- l’API FastAPI n’est pas encore finalisée.
+- l’endpoint `/rebuild` est disponible pour le POC local, mais devrait être protégé ou externalisé en production.
 
 ### Améliorations possibles
 
@@ -696,8 +703,7 @@ Les améliorations possibles sont :
 - améliorer le prompt de génération ;
 - enrichir l’évaluation automatique (jeu de test plus grand, métriques sémantiques) ;
 - affiner la détection du hors sujet pour éviter les faux négatifs côté métrique ;
-- exposer le système via une API FastAPI complète ;
-- préparer un déploiement avec Docker.
+- préparer le déploiement de l’API avec Docker et sécuriser les endpoints sensibles.
 
 ## 9. Organisation du dépôt GitHub
 
@@ -729,12 +735,16 @@ Les principaux fichiers et dossiers sont :
 - `echo_app/indexing/embeddings.py` : génération des embeddings Mistral ;
 - `echo_app/indexing/langchain_embeddings.py` : adaptateur embeddings Mistral compatible LangChain ;
 - `echo_app/indexing/langchain_faiss_store.py` : construction, sauvegarde et chargement du vector store FAISS LangChain ;
+- `echo_app/indexing/rebuild.py` : reconstruction de l’index réutilisée par le script CLI et l’API ;
 - `echo_app/indexing/search.py` : recherche sémantique via le vector store FAISS LangChain ;
 - `echo_app/indexing/faiss_store.py` : ancienne implémentation FAISS bas niveau conservée pour compatibilité et tests ;
 - `echo_app/rag/rag_service.py` : chaîne RAG (recherche, contexte, prompt, génération, sources) ;
 - `echo_app/rag/prompts.py` : prompts métier d’Écho (prompt système et prompt utilisateur) ;
 - `echo_app/rag/langchain_chain.py` : assemblage des messages du prompt via LangChain ;
-- `scripts/rebuild_index.py` : reconstruction complète de l’index ;
+- `echo_app/api/main.py` : endpoints FastAPI `/health`, `/metadata`, `/ask` et `/rebuild` ;
+- `echo_app/api/schemas.py` : schémas Pydantic de l’API ;
+- `scripts/rebuild_index.py` : wrapper CLI de reconstruction de l’index ;
+- `scripts/api_test.py` : test fonctionnel manuel de l’API locale ;
 - `scripts/06_test_semantic_search.py` : test manuel de la recherche sémantique ;
 - `scripts/07_test_rag_service.py` : test manuel de la chaîne RAG complète ;
 - `scripts/08_evaluate_rag.py` : évaluation automatique sur le jeu de test annoté ;
@@ -749,6 +759,18 @@ Reconstruction de l’index :
 
 ```bash
 poetry run python scripts/rebuild_index.py
+```
+
+Lancement de l’API locale :
+
+```bash
+poetry run uvicorn echo_app.api.main:app --reload
+```
+
+Test fonctionnel de l’API locale déjà lancée :
+
+```bash
+poetry run python scripts/api_test.py
 ```
 
 Test manuel de la recherche sémantique :
@@ -790,12 +812,3 @@ Initiation à l'astronomie à Lanton
 ```
 
 Ce résultat montre que la recherche sémantique retrouve correctement un événement dont le contenu est proche de la requête utilisateur.
-
-### Points à compléter dans la suite du projet
-
-Les éléments suivants devront être complétés dans les prochaines étapes :
-
-- API FastAPI finalisée ;
-- endpoints documentés ;
-- jeu de test annoté élargi et évaluation enrichie (métrique sémantique, précision et rappel) ;
-- recommandations finales après évaluation.

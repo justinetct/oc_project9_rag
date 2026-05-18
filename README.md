@@ -88,7 +88,8 @@ oc_project9_rag/
 │   ├── 06_test_semantic_search.py     # Test manuel de la recherche sémantique
 │   ├── 07_test_rag_service.py         # Test manuel de la chaîne RAG complète
 │   ├── 08_evaluate_rag.py             # Évaluation automatique du RAG sur le jeu annoté
-│   └── rebuild_index.py               # Commande principale de reconstruction du vector store FAISS
+│   ├── api_test.py                    # Test fonctionnel manuel de l'API FastAPI locale
+│   └── rebuild_index.py               # Commande CLI de reconstruction du vector store FAISS
 ├── src/                               # Code commun et fonctions utilitaires
 │   ├── chunking.py                    # Découpage des documents en chunks indexables
 │   ├── config.py                      # Constantes, chemins et paramètres de collecte
@@ -155,15 +156,15 @@ poetry run pytest --cov=echo_app --cov-report=term-missing
 Résultat :
 
 ```bash
-================================================================================ tests coverage ================================================================================
-______________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 _______________________________________________________________
+============================================================================ tests coverage ============================================================================
+__________________________________________________________ coverage: platform darwin, python 3.12.13-final-0 ___________________________________________________________
 
 Name                                         Stmts   Miss  Cover   Missing
 --------------------------------------------------------------------------
 echo_app/__init__.py                             0      0   100%
 echo_app/api/__init__.py                         0      0   100%
-echo_app/api/main.py                            54      1    98%   62
-echo_app/api/schemas.py                         30      0   100%
+echo_app/api/main.py                            67      1    99%   147
+echo_app/api/schemas.py                         42      0   100%
 echo_app/config.py                               7      1    86%   19
 echo_app/indexing/__init__.py                    6      0   100%
 echo_app/indexing/embeddings.py                 62      5    92%   53, 70, 82, 93, 105
@@ -177,8 +178,8 @@ echo_app/rag/langchain_chain.py                 12      0   100%
 echo_app/rag/prompts.py                          4      0   100%
 echo_app/rag/rag_service.py                     68      8    88%   49, 115-117, 129, 162-169
 --------------------------------------------------------------------------
-TOTAL                                          442     54    88%
-============================================================================= 128 passed in 1.05s ==============================================================================
+TOTAL                                          467     54    88%
+========================================================================= 130 passed in 1.05s ==========================================================================
 ```
 
 Structure des tests automatisés :
@@ -327,7 +328,10 @@ Le notebook [`notebooks/04_rag_evaluation.ipynb`](notebooks/04_rag_evaluation.ip
 
 ## API FastAPI
 
-Une API FastAPI expose le service RAG via HTTP. Elle ne réimplémente aucune logique RAG : l'endpoint `/ask` appelle directement `RagService.ask()` et retourne sa réponse en JSON. L'endpoint `/rebuild` réutilise la même fonction de reconstruction que le script CLI.
+Une API FastAPI expose le système RAG via HTTP. 
+
+Elle sépare la couche API de la logique métier : `/ask` appelle `RagService.ask()`, tandis que `/rebuild` réutilise la même fonction de reconstruction que le script CLI.
+
 
 ### Lancement local
 
@@ -335,32 +339,21 @@ Une API FastAPI expose le service RAG via HTTP. Elle ne réimplémente aucune lo
 poetry run uvicorn echo_app.api.main:app --reload
 ```
 
+Swagger est disponible sur : <http://127.0.0.1:8000/docs>.
+
+
 ### Endpoints
 
-- `GET /health` → état de l'API et disponibilité du vector store
-- `POST /ask` — question/réponse RAG sourcée
+- `GET /health` → état minimal de l'API (rapide, aucune I/O)
+- `GET /metadata` → informations techniques sur le service RAG et le vector store (sans secret)
+- `POST /ask` → question/réponse RAG sourcée
 - `POST /rebuild` → reconstruction locale de l'index avec confirmation
 
-Exemple de réponse `GET /health` quand un index existe :
-
-```json
-{
-  "status": "ok",
-  "service": "echo-rag-api",
-  "rag_service_ready": true,
-  "vector_store_available": true,
-  "chunks_count": 155,
-  "top_k_default": 5,
-  "last_rebuild_at": "2026-05-13T15:42:00Z"
-}
-```
-
-Dans un environnement neuf (sans `vector_store/`), `vector_store_available` vaut `false` et `chunks_count` / `last_rebuild_at` valent `null`.
-
-### Exemples curl
+Exemples  :
 
 ```bash
 curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/metadata
 
 curl -X POST http://127.0.0.1:8000/ask \
   -H "Content-Type: application/json" \
@@ -371,16 +364,19 @@ curl -X POST http://127.0.0.1:8000/rebuild \
   -d '{"confirm": true}'
 ```
 
-Documentation interactive Swagger : <http://127.0.0.1:8000/docs>.
 
-### Reconstruction de l'index via `/rebuild`
+### Test fonctionnel manuel
 
-`POST /rebuild` réutilise la fonction `echo_app.indexing.rebuild.rebuild_index` (la même que celle appelée par `scripts/rebuild_index.py`). L'opération est synchrone et peut prendre plusieurs dizaines de secondes selon le volume de chunks. Après reconstruction, le retriever en cache du service RAG est invalidé : le prochain `POST /ask` repart automatiquement du nouvel index.
+Un script permet de vérifier une API déjà lancée localement :
 
-Cet endpoint est pensé pour la démo locale du POC. En production réelle, il faudrait le protéger (authentification, rôle dédié) ou externaliser la reconstruction (tâche planifiée, pipeline CI).
+```bash
+poetry run python scripts/api_test.py
+```
 
-### Codes d'erreur
+Par défaut, le script vérifie `/health`, `/metadata`, `/ask` et le refus de `/rebuild` sans confirmation. 
 
-- `422` : champ `question` manquant ou JSON invalide sur `/ask`.
-- `400` : `question` vide ou composée uniquement d'espaces ; `/rebuild` appelé sans `confirm=true`.
-- `500` : erreur inattendue côté service RAG ou pendant la reconstruction de l'index.
+Le rebuild réel est optionnel, car il peut déclencher des appels Mistral :
+
+```bash
+poetry run python scripts/api_test.py --with-rebuild
+```
