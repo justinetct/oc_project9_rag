@@ -189,13 +189,22 @@
     border: 1px solid var(--line);
   }
   .hero h1 {
-    font-size: 28px;
+    font-size: 44px;
     font-weight: 800;
     color: var(--navy);
-    margin: 18px 0 6px;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
+    margin: 22px 0 4px;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
     position: relative;
+  }
+  .hero .hero-subtitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--teal-deep);
+    line-height: 1.35;
+    margin: 0 0 10px;
+    position: relative;
+    letter-spacing: -0.005em;
   }
   .hero .lead {
     color: var(--ink-soft);
@@ -624,14 +633,14 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
     <nav class="nav">
       <div class="nav-label">Sur cette page</div>
       <ul class="sidebar-toc"><li><a href="#1-objectifs-du-projet"><span class="num">01</span><span class="lbl">1. Objectifs du projet</span></a></li>
-<li><a href="#2-architecture-du-systeme"><span class="num">02</span><span class="lbl">2. Architecture du système</span></a></li>
-<li><a href="#3-preparation-et-vectorisation-des-donnees"><span class="num">03</span><span class="lbl">3. Préparation et vectorisation des données</span></a></li>
-<li><a href="#4-choix-du-modele-nlp"><span class="num">04</span><span class="lbl">4. Choix du modèle NLP</span></a></li>
-<li><a href="#5-base-vectorielle-et-recherche-semantique"><span class="num">05</span><span class="lbl">5. Base vectorielle et recherche sémantique</span></a></li>
-<li><a href="#6-api-et-endpoints-exposes"><span class="num">06</span><span class="lbl">6. API et endpoints exposés</span></a></li>
-<li><a href="#7-evaluation-du-systeme"><span class="num">07</span><span class="lbl">7. Évaluation du système</span></a></li>
+<li><a href="#2-architecture-du-système"><span class="num">02</span><span class="lbl">2. Architecture du système</span></a></li>
+<li><a href="#3-préparation-et-vectorisation-des-données"><span class="num">03</span><span class="lbl">3. Préparation et vectorisation des données</span></a></li>
+<li><a href="#4-choix-du-modèle-nlp"><span class="num">04</span><span class="lbl">4. Choix du modèle NLP</span></a></li>
+<li><a href="#5-base-vectorielle-et-recherche-sémantique"><span class="num">05</span><span class="lbl">5. Base vectorielle et recherche sémantique</span></a></li>
+<li><a href="#6-api-et-endpoints-exposés"><span class="num">06</span><span class="lbl">6. API et endpoints exposés</span></a></li>
+<li><a href="#7-évaluation-du-système"><span class="num">07</span><span class="lbl">7. Évaluation du système</span></a></li>
 <li><a href="#8-recommandations-et-perspectives"><span class="num">08</span><span class="lbl">8. Recommandations et perspectives</span></a></li>
-<li><a href="#9-organisation-du-depot-github"><span class="num">09</span><span class="lbl">9. Organisation du dépôt GitHub</span></a></li>
+<li><a href="#9-organisation-du-dépôt-github"><span class="num">09</span><span class="lbl">9. Organisation du dépôt GitHub</span></a></li>
 <li><a href="#10-annexes"><span class="num">10</span><span class="lbl">10. Annexes</span></a></li></ul>
     </nav>
     <main class="content">
@@ -650,15 +659,16 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
             <span>FastAPI</span>
           </div>
         </div>
-        <h1>Écho — Assistant intelligent de recommandation d'événements culturels</h1>
+        <h1>Rapport technique</h1>
+        <div class="hero-subtitle">Écho — Assistant intelligent de recommandation d'événements culturels</div>
         <p class="lead">Système RAG construit autour d'OpenAgenda pour proposer des événements culturels du Bassin d'Arcachon.</p>
       </section>
 
-      <h1 id="rapport-technique-echo-assistant-intelligent-de-recommandation-devenements-culturels">Rapport technique - Écho, assistant intelligent de recommandation d’événements culturels</h1>
+      <h1 id="rapport-technique-écho-assistant-intelligent-de-recommandation-dévénements-culturels">Rapport technique - Écho, assistant intelligent de recommandation d’événements culturels</h1>
 
 <h2 id="1-objectifs-du-projet">1. Objectifs du projet</h2>
 <h3 id="contexte">Contexte</h3>
-<p>Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon.</p>
+<p>Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon, à partir de données issues d’<a href="https://openagenda.com/">OpenAgenda</a> exposées via Opendatasoft.</p>
 <p>Le projet consiste à concevoir un système RAG, c’est-à-dire un système qui combine :</p>
 <ul>
 <li>une base documentaire construite à partir d’événements OpenAgenda ;</li>
@@ -666,7 +676,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <li>un modèle de langage pour générer une réponse naturelle à partir des événements retrouvés.</li>
 </ul>
 <p>L’application développée dans le cadre du POC s’appelle <strong>Écho</strong>.</p>
-<h3 id="problematique">Problématique</h3>
+<h3 id="problématique">Problématique</h3>
 <p>Les événements culturels sont souvent décrits dans des formats hétérogènes : descriptions longues ou courtes, champs parfois incomplets, dates multiples, lieux différents, liens externes, images et métadonnées diverses.</p>
 <p>Un système RAG répond à ce besoin car il permet de :</p>
 <ul>
@@ -690,150 +700,106 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <li>préparer l’intégration avec un modèle de langage ;</li>
 <li>exposer le système via une API.</li>
 </ul>
-<h3 id="perimetre">Périmètre</h3>
+<h3 id="périmètre">Périmètre</h3>
 <p>Le périmètre du POC est volontairement limité afin de rester simple et maîtrisable.</p>
 <p>Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.</p>
-<p>À l’état actuel du projet, le pipeline de préparation des données, le chunking, les embeddings, la construction du vector store FAISS LangChain, la recherche sémantique, la chaîne RAG (retriever FAISS LangChain + prompting LangChain + génération Mistral), l’API FastAPI et une première évaluation automatique sur un jeu de test annoté sont implémentés et testés.</p>
-<h2 id="2-architecture-du-systeme">2. Architecture du système</h2>
-<h3 id="schema-darchitecture-du-systeme">Diagramme UML de composants</h3>
-<p>Le diagramme regroupe les éléments du système Écho en quatre zones : l’application Écho (API, service RAG, retriever), le service externe de génération (Mistral LLM), l’index vectoriel (FAISS) et le pipeline de données (OpenAgenda → préparation → embeddings).</p>
+<p>Le POC implémente et teste l’ensemble de la chaîne RAG : préparation des données, chunking, embeddings Mistral, index FAISS LangChain, recherche sémantique, génération Mistral, API FastAPI et évaluation automatique sur un jeu annoté.</p>
+<h2 id="2-architecture-du-système">2. Architecture du système</h2>
+<h3 id="diagramme-uml-de-composants">Diagramme UML de composants</h3>
+<p>Le diagramme regroupe les éléments du système Écho en quatre zones : l'application Écho (API, service RAG, retriever), le service externe de génération (Mistral LLM), l'index vectoriel (FAISS) et le pipeline de données (OpenAgenda → préparation → embeddings).</p>
+<p><img alt="Diagramme UML de composants — Écho" src="assets/architecture_uml_components.svg" /></p>
+<p>Le diagramme se lit en deux flux :</p>
+<ul>
+<li><strong>Flux question / réponse (en haut)</strong> : l'utilisateur envoie une question HTTP à l'API FastAPI, qui délègue à <code>RagService</code>. Celui-ci appelle le <code>Retriever LangChain</code> (recherche FAISS, k=5) pour récupérer les chunks pertinents, puis transmet la question + contexte au <code>Mistral LLM</code> qui génère la réponse.</li>
+<li><strong>Flux d'indexation (en bas)</strong> : les événements OpenAgenda sont collectés puis préparés (filtrage, nettoyage, conversion en JSONL, chunking). Le composant <code>Préparation &amp; indexation</code> utilise <code>Mistral Embeddings</code> pour vectoriser les chunks et alimente l'index FAISS.</li>
+</ul>
+<h3 id="données-entrantes">Données entrantes</h3>
+<p>Les données entrantes proviennent d’OpenAgenda via l’API Opendatasoft. Le pipeline de collecte et de préparation est découpé en scripts courts, chacun responsable d’une étape précise.</p>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Script</th>
+<th>Rôle</th>
+<th>Sortie principale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Collecte</td>
+<td><code>01_fetch_openagenda_events.py</code></td>
+<td>Récupérer les événements bruts depuis OpenAgenda.</td>
+<td><code>data/raw/openagenda_events_raw.json</code></td>
+</tr>
+<tr>
+<td>Filtrage</td>
+<td><code>02_filter_openagenda_events.py</code></td>
+<td>Conserver le périmètre géographique et temporel du POC.</td>
+<td><code>data/processed/events_filtered.json</code></td>
+</tr>
+<tr>
+<td>Nettoyage</td>
+<td><code>03_clean_openagenda_events.py</code></td>
+<td>Normaliser les textes, les dates et les métadonnées utiles.</td>
+<td><code>data/processed/events_clean.json</code></td>
+</tr>
+<tr>
+<td>Documents RAG</td>
+<td><code>04_build_event_documents.py</code></td>
+<td>Transformer les événements nettoyés en documents indexables.</td>
+<td><code>data/processed/events_documents.jsonl</code></td>
+</tr>
+</tbody>
+</table>
+<p>Le fichier <code>events_documents.jsonl</code> est ensuite utilisé pour construire le vector store FAISS.</p>
+<p>Les scripts sont situés dans le dossier <code>scripts/</code>.</p>
+<h3 id="prétraitement-embeddings-et-base-vectorielle">Prétraitement, embeddings et base vectorielle</h3>
+<p>Les événements nettoyés sont transformés en documents Markdown. Ce format reste lisible par un humain tout en donnant au modèle un texte structuré à indexer.</p>
+<p>Exemple court de document indexable :</p>
+<div class="highlight"><pre><span></span><code><span class="gh"># Initiation à l&#39;astronomie à Lanton</span>
 
-<figure style="margin:20px auto 28px;padding:24px;background:#ffffff;border:1px solid rgba(148,163,184,0.35);border-radius:16px;box-shadow:0 16px 40px rgba(15,23,42,0.18);overflow-x:auto;color-scheme:light;text-align:center;">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 690" font-family="system-ui, -apple-system, 'Segoe UI', Inter, sans-serif" font-size="13" role="img" aria-labelledby="uml-title uml-desc" style="display:block;width:100%;height:auto;max-width:100%;">
-  <title id="uml-title">Diagramme UML de composants — Écho</title>
-  <desc id="uml-desc">Diagramme UML de composants simplifié du système RAG Écho.</desc>
-  <defs>
-    <marker id="uml-dep" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L12,6 L0,12" fill="none" stroke="#1F3D5C" stroke-width="1.3"/></marker>
-    <marker id="uml-dep-gold" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L12,6 L0,12" fill="none" stroke="#A07A30" stroke-width="1.3"/></marker>
-  </defs>
-  <rect x="0" y="0" width="1040" height="690" fill="#FFFFFF"/>
-  <text x="520" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#0E2A47">Diagramme UML de composants — Écho</text>
-  <g>
-    <circle cx="70" cy="130" r="11" fill="#FFFFFF" stroke="#0E2A47" stroke-width="1.5"/>
-    <line x1="70" y1="141" x2="70" y2="160" stroke="#0E2A47" stroke-width="1.5"/>
-    <line x1="58" y1="150" x2="82" y2="150" stroke="#0E2A47" stroke-width="1.5"/>
-    <line x1="70" y1="160" x2="62" y2="177" stroke="#0E2A47" stroke-width="1.5"/>
-    <line x1="70" y1="160" x2="78" y2="177" stroke="#0E2A47" stroke-width="1.5"/>
-    <text x="70" y="195" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="13">Utilisateur</text>
-  </g>
-  <rect x="220" y="96" width="720" height="134" fill="#F8FAFB" stroke="#1F3D5C" stroke-width="1.3"/>
-  <rect x="470" y="316" width="180" height="124" fill="#F8FAFB" stroke="#A07A30" stroke-width="1.3"/>
-  <rect x="700" y="316" width="180" height="124" fill="#F8FAFB" stroke="#1F3D5C" stroke-width="1.3"/>
-  <rect x="220" y="526" width="720" height="134" fill="#F8FAFB" stroke="#1F3D5C" stroke-width="1.3"/>
-  <g>
-    <rect x="260" y="120" width="160" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
-    <text x="340" y="158" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">API FastAPI</text>
-    <text x="340" y="180" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">HTTP /ask</text>
-  </g>
-  <g>
-    <rect x="480" y="120" width="160" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
-    <text x="560" y="158" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">RagService</text>
-    <text x="560" y="180" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">orchestration RAG</text>
-  </g>
-  <g>
-    <rect x="700" y="120" width="180" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
-    <text x="790" y="156" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="13">Retriever LangChain</text>
-    <text x="790" y="178" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">recherche k=5</text>
-  </g>
-  <g>
-    <rect x="480" y="340" width="160" height="80" rx="4" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
-    <text x="560" y="373" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">Mistral LLM</text>
-    <text x="560" y="395" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">génération</text>
-  </g>
-  <g>
-    <rect x="710" y="340" width="160" height="80" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
-    <text x="790" y="373" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">FAISS</text>
-    <text x="790" y="395" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">index vectoriel</text>
-  </g>
-  <g>
-    <rect x="260" y="550" width="160" height="90" rx="4" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
-    <text x="340" y="588" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">OpenAgenda</text>
-    <text x="340" y="610" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">événements</text>
-  </g>
-  <g>
-    <rect x="480" y="550" width="220" height="90" rx="4" fill="#FFFFFF" stroke="#1F3D5C" stroke-width="1.3"/>
-    <text x="590" y="588" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">Préparation &amp; indexation</text>
-    <text x="590" y="610" text-anchor="middle" font-size="11" font-style="italic" fill="#64748B">JSONL → chunks</text>
-  </g>
-  <g>
-    <rect x="740" y="550" width="160" height="90" rx="4" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
-    <text x="820" y="588" text-anchor="middle" font-weight="700" fill="#0E2A47" font-size="14">Mistral Embeddings</text>
-    <text x="820" y="610" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">vectorisation</text>
-  </g>
-  <line x1="85" y1="145" x2="258" y2="145" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <line x1="258" y1="165" x2="85" y2="165" stroke="#A07A30" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep-gold)"/>
-  <line x1="422" y1="165" x2="478" y2="165" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <line x1="642" y1="165" x2="698" y2="165" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <line x1="560" y1="210" x2="560" y2="338" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <line x1="790" y1="210" x2="790" y2="338" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <line x1="422" y1="595" x2="478" y2="595" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <path d="M 590,550 L 590,485 L 790,485 L 790,422" fill="none" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <line x1="702" y1="595" x2="738" y2="595" stroke="#1F3D5C" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-dep)"/>
-  <text x="171" y="135" text-anchor="middle" font-size="11" font-style="italic" fill="#1F3D5C">question</text>
-  <text x="171" y="182" text-anchor="middle" font-size="11" font-style="italic" fill="#A07A30">réponse</text>
-  <text x="450" y="155" text-anchor="middle" font-size="11" font-style="italic" fill="#1F3D5C">utilise</text>
-  <text x="575" y="265" text-anchor="start" font-size="11" font-style="italic" fill="#1F3D5C">prompt + contexte</text>
-  <text x="805" y="265" text-anchor="start" font-size="11" font-style="italic" fill="#1F3D5C">recherche</text>
-  <text x="690" y="478" text-anchor="middle" font-size="11" font-style="italic" fill="#1F3D5C">indexation</text>
-  <rect x="220" y="70" width="190" height="26" fill="#E8F5F4" stroke="#1F3D5C" stroke-width="1.3"/>
-  <text x="235" y="88" font-size="13" font-weight="700" fill="#0E2A47">Application Écho</text>
-  <rect x="470" y="290" width="180" height="26" fill="#FAF1DC" stroke="#A07A30" stroke-width="1.3"/>
-  <text x="482" y="308" font-size="12" font-weight="700" fill="#0E2A47">Service de génération</text>
-  <rect x="700" y="290" width="180" height="26" fill="#E8F5F4" stroke="#1F3D5C" stroke-width="1.3"/>
-  <text x="715" y="308" font-size="13" font-weight="700" fill="#0E2A47">Index vectoriel</text>
-  <rect x="220" y="500" width="200" height="26" fill="#E8F5F4" stroke="#1F3D5C" stroke-width="1.3"/>
-  <text x="235" y="518" font-size="13" font-weight="700" fill="#0E2A47">Pipeline de données</text>
-</svg>
-</figure>
+Ville : Lanton
+Date : 5 janvier 2026
 
-<p><strong>Flux question / réponse (en haut)</strong> — l’utilisateur envoie une question HTTP à l’API FastAPI, qui délègue à <code>RagService</code> ; celui-ci appelle le <code>Retriever LangChain</code> (recherche FAISS, k=5) pour récupérer les chunks pertinents, puis transmet la question + contexte au <code>Mistral LLM</code> qui génère la réponse.</p>
-
-<p><strong>Flux d’indexation (en bas)</strong> — les événements OpenAgenda sont collectés puis préparés (filtrage, nettoyage, conversion en JSONL, chunking) ; le composant <code>Préparation &amp; indexation</code> utilise <code>Mistral Embeddings</code> pour vectoriser les chunks et alimente l’index FAISS.</p>
-
-<h3 id="donnees-entrantes">Données entrantes</h3>
-<p>Les données entrantes proviennent de l’API OpenAgenda via l’API Opendatasoft.</p>
-<p>Le pipeline de collecte et de préparation est découpé en plusieurs scripts :</p>
-<div class="highlight"><pre><span></span><code>scripts/01_fetch_openagenda_events.py
-scripts/02_filter_openagenda_events.py
-scripts/03_clean_openagenda_events.py
-scripts/04_build_event_documents.py
+Découverte du ciel et initiation à l&#39;observation astronomique.
 </code></pre></div>
 
-<p>Ces scripts produisent progressivement :</p>
-<div class="highlight"><pre><span></span><code>data/raw/openagenda_events_raw.json
-data/processed/events_filtered.json
-data/processed/events_clean.json
-data/processed/events_documents.jsonl
-</code></pre></div>
-
-<p>Le fichier <code>events_documents.jsonl</code> est la base utilisée pour construire le vector store.</p>
-<h3 id="pretraitement-embeddings-et-base-vectorielle">Prétraitement, embeddings et base vectorielle</h3>
-<p>Les événements nettoyés sont transformés en documents Markdown. Ces documents sont ensuite découpés en chunks, puis vectorisés avec le modèle d’embedding Mistral.</p>
+<p>Ces documents sont ensuite découpés en chunks, puis vectorisés avec le modèle d’embedding Mistral.</p>
 <p>Les vecteurs et leurs métadonnées sont stockés dans un vector store FAISS LangChain (<code>langchain_community.vectorstores.FAISS</code>), qui les sauvegarde localement sous forme de deux fichiers <code>index.faiss</code> + <code>index.pkl</code>.</p>
-<h3 id="integration-llm">Intégration LLM</h3>
+<h3 id="intégration-llm">Intégration LLM</h3>
 <p>L’intégration avec le modèle de langage est portée par la classe <code>RagService</code>, dans <code>echo_app/rag/rag_service.py</code>. Cette classe orchestre :</p>
 <ol>
 <li>la recherche sémantique via le retriever LangChain obtenu avec <code>vectorstore.as_retriever(search_kwargs={"k": top_k})</code>, appelé par <code>retriever.invoke(question)</code> ;</li>
-<li>la construction d’un contexte numéroté à partir des <code>Document</code> retrouvés ;</li>
-<li>la construction d’un message utilisateur combinant le contexte et la question ;</li>
+<li>la construction d’un contexte numéroté à partir des <code>Document</code> retrouvés : chaque chunk est préfixé par <code>[1]</code>, <code>[2]</code>, etc. pour distinguer les sources utilisées ;</li>
+<li>la construction d’un message utilisateur combinant ce contexte et la question ;</li>
 <li>l’appel à Mistral via <code>client.chat.complete()</code> ;</li>
 <li>l’extraction d’une liste de sources lisibles, dédoublonnée par <code>event_id</code>.</li>
 </ol>
+<p>Exemple simplifié de contexte envoyé au modèle :</p>
+<div class="highlight"><pre><span></span><code>[1] Initiation à l&#39;astronomie — Lanton
+Découverte du ciel et observation des étoiles.
+
+---
+[2] Nuit des étoiles — Le Teich
+Animation autour de l&#39;observation astronomique.
+</code></pre></div>
+
+<p>Le message utilisateur final combine ensuite ce contexte avec la question :</p>
+<div class="highlight"><pre><span></span><code>Contexte :
+[1] Initiation à l&#39;astronomie — Lanton
+...
+
+Question :
+Quels événements autour de l&#39;astronomie sont proposés ?
+</code></pre></div>
+
+<p>Cette numérotation facilite la traçabilité entre les chunks retrouvés, la réponse générée et les sources affichées.</p>
 <p>Le modèle de génération utilisé est <code class="badge-tech">mistral-small-latest</code>, configurable via la variable d’environnement <code>MISTRAL_MODEL</code>. Le client Mistral est créé uniquement au moment de générer une réponse, ce qui permet d’instancier <code>RagService</code> sans clé API en environnement de test.</p>
 <h3 id="exposition-via-api">Exposition via API</h3>
-<p>L’API FastAPI est implémentée dans <a href="../echo_app/api/"><code>echo_app/api/</code></a> et expose quatre endpoints :</p>
-<ul>
-<li><code>GET /health</code> : vérifie que l’API répond (statut minimal, sans I/O) ;</li>
-<li><code>GET /metadata</code> : expose l’état du système RAG et du vector store (chunks indexés, disponibilité de l’index, noms des modèles Mistral) sans secret ;</li>
-<li><code>POST /ask</code> : pose une question au système et retourne <code>{question, answer, sources}</code> ; délègue à <code>RagService.ask()</code> ;</li>
-<li><code>POST /rebuild</code> : reconstruit localement l’index FAISS, sous condition de <code>confirm=true</code>.</li>
-</ul>
-<p>La logique RAG reste isolée dans <code>echo_app/rag/rag_service.py</code> ; la couche API se contente d’appeler <code>RagService.ask()</code>. La reconstruction de l’index est portée par <code>echo_app.indexing.rebuild.rebuild_index()</code>, partagée entre <code>scripts/rebuild_index.py</code> (CLI) et <code>POST /rebuild</code> (API).</p>
-<p>Performance : l’index FAISS est chargé en mémoire une seule fois (lazy au premier <code>/ask</code>) puis conservé en cache. Le cache n’est invalidé qu’après un <code>/rebuild</code> réussi.</p>
-<p>Documentation interactive : Swagger sur <code>/docs</code>, généré automatiquement par FastAPI.</p>
-<p>Un script fonctionnel <a href="../scripts/api_test.py"><code>scripts/api_test.py</code></a> permet de vérifier rapidement une API déjà lancée : <code>/health</code>, <code>/metadata</code>, <code>/ask</code> (question simple) et <code>/rebuild</code> (refus sans confirmation). Il n’est pas exécuté par pytest et n’appelle pas Mistral coûteusement par défaut.</p>
-<p><code>POST /rebuild</code> est documenté comme endpoint POC. En production réelle, il devrait être protégé (authentification, rôle dédié) ou remplacé par une tâche planifiée hors du chemin HTTP.</p>
-<h3 id="technologies-utilisees">Technologies utilisées</h3>
+<p>L’API FastAPI est implémentée dans <a href="../echo_app/api/"><code>echo_app/api/</code></a>. Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question au chatbot et reconstruction locale de l’index.</p>
+<p>La logique RAG reste isolée dans <code>echo_app/rag/rag_service.py</code> : l’API ne fait que valider les requêtes, appeler le service métier et formater les réponses. Les endpoints, les formats de requête/réponse et les choix de gestion d’erreur sont détaillés dans la section <a href="#6-api-et-endpoints-exposés">6. API et endpoints exposés</a>.</p>
+<div class="callout callout-warning"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span class="callout-label">Attention</span></div><div class="callout-body"><p><code>POST /rebuild</code> est utile pour le POC local, mais il devrait être protégé ou remplacé par une tâche interne si l’API était exposée en production.</p></div></div>
+<h3 id="technologies-utilisées">Technologies utilisées</h3>
 <p>Les principales technologies utilisées sont :</p>
 <ul>
 <li>Python 3.12 ;</li>
@@ -843,18 +809,24 @@ data/processed/events_documents.jsonl
 <li>Mistral AI pour les embeddings et la génération de réponse ;</li>
 <li>FAISS via LangChain pour l’index vectoriel et la recherche sémantique ;</li>
 <li>FastAPI pour l’API locale ;</li>
+<li>Docker et Docker Compose pour lancer l’API dans un environnement reproductible ;</li>
 <li>pytest pour les tests automatisés ;</li>
 <li>ruff pour la qualité du code.</li>
 </ul>
-<h2 id="3-preparation-et-vectorisation-des-donnees">3. Préparation et vectorisation des données</h2>
-<h3 id="source-de-donnees">Source de données</h3>
+<h2 id="3-préparation-et-vectorisation-des-données">3. Préparation et vectorisation des données</h2>
+<h3 id="source-de-données">Source de données</h3>
 <p>Les événements sont collectés depuis OpenAgenda. La collecte récupère des événements culturels, puis le pipeline applique un filtrage afin de conserver un périmètre cohérent avec le POC.</p>
-<p>Une date de référence fixe est utilisée pour rendre le POC reproductible :</p>
-<div class="highlight"><pre><span></span><code>2026-05-01
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Une date de référence fixe (<code>2026-05-01</code>) est utilisée pour rendre le POC reproductible et obtenir des résultats stables pendant le développement.</p></div></div>
+<p>Exemple simplifié de donnée OpenAgenda avant préparation :</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie à Lanton&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;location_city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lanton&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;p&gt;Découverte du ciel...&lt;/p&gt;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;firstdate_begin&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span>
+<span class="p">}</span>
 </code></pre></div>
 
-<p>Ce choix permet d’obtenir des résultats stables pendant le développement et les démonstrations.</p>
-<h3 id="nettoyage-des-donnees">Nettoyage des données</h3>
+<h3 id="nettoyage-des-données">Nettoyage des données</h3>
 <p>Les événements bruts contiennent des champs hétérogènes. Le nettoyage permet de produire des données plus régulières et plus faciles à indexer.</p>
 <p>Les traitements réalisés incluent notamment :</p>
 <ul>
@@ -867,6 +839,7 @@ data/processed/events_documents.jsonl
 <li>suppression des liens bruts répétés dans le texte indexable.</li>
 </ul>
 <p>Les URL ne sont pas intégrées dans le texte indexable. Elles sont conservées dans les métadonnées afin de pouvoir être affichées après la recherche.</p>
+<p>Par exemple, un fragment HTML comme <code>&lt;p&gt;Découverte du ciel...&lt;/p&gt;</code> est converti en texte simple : <code>Découverte du ciel...</code>.</p>
 <h3 id="construction-des-documents-rag">Construction des documents RAG</h3>
 <p>Chaque événement est transformé en document RAG.</p>
 <p>Chaque document contient :</p>
@@ -874,17 +847,29 @@ data/processed/events_documents.jsonl
 <li><code>document_text</code> : texte Markdown utilisé pour l’indexation ;</li>
 <li><code>metadata</code> : informations structurées conservées séparément.</li>
 </ul>
-<p>Exemples de métadonnées conservées :</p>
-<ul>
-<li>titre ;</li>
-<li>ville ;</li>
-<li>dates ;</li>
-<li>URL source ;</li>
-<li>image ;</li>
-<li>coordonnées ;</li>
-<li>identifiant d’événement.</li>
-</ul>
+<p>Exemple de métadonnées conservées avec le document :</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;13708573&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie à Lanton&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lanton&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;start_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://openagenda.com/...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;latitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">44.704</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;longitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-1.039</span>
+<span class="p">}</span>
+</code></pre></div>
+
 <p>Cette séparation permet de garder un texte propre pour les embeddings, tout en conservant les informations utiles pour l’affichage des résultats.</p>
+<p>Exemple court de document Markdown produit pour l’indexation :</p>
+<div class="highlight"><pre><span></span><code><span class="gh"># Initiation à l&#39;astronomie à Lanton</span>
+
+Ville : Lanton
+Date : 5 janvier 2026
+Lieu : Lanton
+
+Découverte du ciel et initiation à l&#39;observation astronomique.
+</code></pre></div>
+
 <h3 id="chunking">Chunking</h3>
 <p>Avant la vectorisation, les documents sont découpés en chunks.</p>
 <p>L’objectif du chunking est d’éviter d’envoyer des textes trop longs au modèle d’embedding et d’améliorer la précision de la recherche. Un chunk représente un morceau de document qui peut être retrouvé indépendamment dans l’index FAISS.</p>
@@ -902,27 +887,17 @@ CHUNK_OVERLAP = 150
 MIN_CHUNK_SIZE = 200
 </code></pre></div>
 
-<p>Cette stratégie a été retenue car le corpus OpenAgenda utilisé contient majoritairement des documents courts. Un découpage plus complexe, par structure Markdown ou par phrases avec spaCy, a été exploré dans le notebook, mais il n’a pas été conservé dans le pipeline principal afin de garder une solution simple, robuste et facile à maintenir.</p>
-<h3 id="generation-des-embeddings">Génération des embeddings</h3>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Cette stratégie a été retenue car le corpus OpenAgenda utilisé <strong>contient majoritairement des documents courts</strong>. Un découpage plus complexe, par structure Markdown ou par phrases avec spaCy, a été exploré dans le notebook, mais il n’a pas été conservé dans le pipeline principal afin de garder une solution simple, robuste et facile à maintenir.</p></div></div>
+<h3 id="génération-des-embeddings">Génération des embeddings</h3>
 <p>Chaque chunk est transformé en vecteur numérique avec le modèle d’embedding Mistral.</p>
-<p>Le modèle utilisé est :</p>
-<div class="highlight"><pre><span></span><code>mistral-embed
-</code></pre></div>
-
-<p>Ce modèle produit des vecteurs de dimension :</p>
-<div class="highlight"><pre><span></span><code>1024
-</code></pre></div>
-
-<p>La génération des embeddings est faite par batchs. Un batch n’est pas un chunk : un chunk est une unité de contenu, alors qu’un batch est simplement un groupe technique de plusieurs chunks envoyés ensemble à l’API Mistral.</p>
+<p>Le modèle utilisé est <code class="badge-tech">mistral-embed</code>, qui produit des vecteurs de dimension <code>1024</code>.</p>
+<p>La génération des embeddings est faite par batchs. Un batch est différent d’un chunk : le chunk correspond à une unité de contenu indexée, tandis que le batch est seulement un regroupement technique de plusieurs chunks envoyés ensemble à l’API Mistral.</p>
 <p>Cette logique permet d’éviter de faire un appel API séparé pour chaque chunk.</p>
 <p>Le pipeline vérifie également que les embeddings retournés ont bien la dimension attendue avant de les envoyer à FAISS. Cela évite de construire un index incohérent.</p>
-<h2 id="4-choix-du-modele-nlp">4. Choix du modèle NLP</h2>
-<h3 id="modele-dembedding">Modèle d’embedding</h3>
-<p>Pour la vectorisation, le modèle retenu est :</p>
-<div class="highlight"><pre><span></span><code>mistral-embed
-</code></pre></div>
-
-<p>Ce choix est cohérent avec le reste de la stack Mistral prévue pour le projet.</p>
+<h2 id="4-choix-du-modèle-nlp">4. Choix du modèle NLP</h2>
+<h3 id="modèle-dembedding">Modèle d’embedding</h3>
+<p>Pour la vectorisation, le modèle retenu est : <code class="badge-tech">mistral-embed</code>.</p>
+<p>Utiliser Mistral pour les embeddings et la génération permet de garder une configuration homogène : une seule clé API, une seule bibliothèque Python et des modèles compatibles avec le reste de la chaîne RAG.</p>
 <p>Les raisons principales sont :</p>
 <ul>
 <li>intégration simple via l’API Mistral ;</li>
@@ -930,38 +905,44 @@ MIN_CHUNK_SIZE = 200
 <li>dimension fixe de 1024 ;</li>
 <li>compatibilité avec une indexation FAISS locale.</li>
 </ul>
-<h3 id="modele-de-generation">Modèle de génération</h3>
+<h3 id="modèle-de-génération">Modèle de génération</h3>
 <p>Le modèle de génération est utilisé pour produire la réponse finale à partir des chunks retrouvés par la recherche sémantique.</p>
-<p>Le modèle par défaut est :</p>
-<div class="highlight"><pre><span></span><code>mistral-small-latest
-</code></pre></div>
-
-<p>Il est configurable via la variable d’environnement <code>MISTRAL_MODEL</code>. L’appel est effectué via <code>client.chat.complete()</code> du SDK Mistral, dans la méthode <code>_generate_answer()</code> de <code>RagService</code>. Cette méthode est isolée pour permettre un mock simple dans les tests.</p>
+<p>Le modèle par défaut est : <code class="badge-tech">mistral-small-latest</code>.</p>
+<p>Il est configurable via la variable d’environnement <code>MISTRAL_MODEL</code>. L’appel est effectué via <code>client.chat.complete()</code> de la bibliothèque Python Mistral, dans la méthode <code>_generate_answer()</code> de <code>RagService</code>. Cette méthode est isolée pour faciliter les tests avec un faux client Mistral.</p>
 <h3 id="prompting">Prompting</h3>
-<p>Le prompt système et le prompt utilisateur sont versionnés dans <code>echo_app/rag/prompts.py</code> (constante <code>RAG_SYSTEM_PROMPT</code> et fonction <code>build_user_prompt</code>). Cette séparation permet de les itérer indépendamment du code du service et de garder le cadrage métier facile à relire.</p>
-<p>L'assemblage des messages <code>[system, user]</code> envoyés au modèle passe par LangChain (<code>ChatPromptTemplate</code>) dans <code>echo_app/rag/langchain_chain.py</code>. La fonction <code>build_langchain_messages(question, context)</code> injecte le prompt système et le prompt utilisateur dans le template, puis convertit les messages LangChain en simples dictionnaires <code>{"role", "content"}</code> directement compatibles avec <code>client.chat.complete()</code> du SDK Mistral.</p>
-<p>LangChain joue désormais un rôle plus complet dans la chaîne RAG. La recherche vectorielle passe par le vector store FAISS fourni par LangChain (<code>langchain_community.vectorstores.FAISS</code>), exposé à <code>RagService</code> sous forme de retriever via <code>.as_retriever(search_kwargs={"k": top_k})</code>. La récupération des chunks pertinents se fait donc via <code>retriever.invoke(question)</code>, et la construction des messages reste pilotée par <code>ChatPromptTemplate</code>. Aucun historique conversationnel n'est ajouté à ce stade : chaque question est traitée indépendamment, ce qui garde l'orchestration simple et explicable.</p>
-<p>Le prompt envoyé à Mistral est découpé en deux messages :</p>
+<p>Les prompts sont versionnés dans <code>echo_app/rag/prompts.py</code> :</p>
 <ul>
-<li>un message <strong>système</strong> qui définit la persona Écho et fixe les règles :</li>
-<li>répondre uniquement à partir du contexte fourni ;</li>
-<li>ne jamais inventer d’événement, de date, de lieu, de prix ou d’URL ;</li>
-<li>rester en français, dans un ton clair, utile et bienveillant ;</li>
-<li>reconnaître explicitement les cas où le contexte ne permet pas de répondre ;</li>
-<li>citer les événements utilisés par leur titre et leur ville lorsque c’est pertinent ;</li>
-<li>rester concis (2 à 5 phrases dans la plupart des cas) ;</li>
-<li>
-<p>pour une question hors sujet, indiquer poliment que le chatbot répond uniquement sur les événements présents dans le contexte.</p>
-</li>
-<li>
-<p>un message <strong>utilisateur</strong> qui contient :</p>
-</li>
-<li>les chunks retrouvés par FAISS, numérotés <code>[1]</code> à <code>[N]</code> et séparés par une ligne <code>---</code>, chacun précédé d’une en-tête <code>[n] titre — ville (date)</code> ;</li>
-<li>la question utilisateur à la suite du contexte.</li>
+<li><code>RAG_SYSTEM_PROMPT</code> contient les règles générales du chatbot ;</li>
+<li><code>build_user_prompt()</code> construit le message utilisateur à partir du contexte retrouvé et de la question.</li>
 </ul>
+<p>Cette séparation permet de faire évoluer le cadrage métier sans modifier directement le service RAG.</p>
+<p>Le prompt envoyé à Mistral est composé de deux messages :</p>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>system</code></td>
+<td>Définit la persona Écho et les règles de réponse.</td>
+</tr>
+<tr>
+<td><code>user</code></td>
+<td>Contient les chunks retrouvés par FAISS, puis la question posée.</td>
+</tr>
+</tbody>
+</table>
+<p>Les règles principales du message système sont volontairement simples : répondre en français, utiliser uniquement le contexte fourni, ne pas inventer d’événement, et signaler clairement quand le contexte ne permet pas de répondre.</p>
+<p>Le message utilisateur contient un contexte numéroté (<code>[1]</code>, <code>[2]</code>, etc.) afin de faciliter la traçabilité entre les chunks retrouvés, la réponse générée et les sources affichées.</p>
+<p>Dans cette partie, LangChain sert surtout à assembler les messages envoyés au modèle grâce à <code>ChatPromptTemplate</code>. Son rôle dans la recherche vectorielle est détaillé dans la section <a href="#5-base-vectorielle-et-recherche-sémantique">5. Base vectorielle et recherche sémantique</a>.</p>
+<p>Les messages obtenus sont ensuite convertis en dictionnaires simples, compatibles avec <code>client.chat.complete()</code> de la bibliothèque Python Mistral.</p>
 <p>Le paramètre <code>temperature=0.2</code> est utilisé pour limiter la créativité du modèle et privilégier des réponses ancrées dans le contexte.</p>
-<p>Si la recherche FAISS retourne zéro résultat, le service court-circuite l’appel au modèle et renvoie directement une réponse explicite (« Je n’ai trouvé aucun événement pertinent pour votre question. ») avec une liste de sources vide. Cela évite un appel API inutile et garantit un comportement déterministe.</p>
-<h3 id="limites-du-modele">Limites du modèle</h3>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Aucun historique conversationnel n’est utilisé : chaque question est traitée indépendamment. Ce choix garde le POC simple et limite les effets de bord.</p></div></div>
+<p>Si la recherche FAISS ne retourne aucun résultat, le service n’appelle pas le modèle. Il renvoie directement une réponse explicite avec une liste de sources vide. Cela évite un appel API inutile et garantit un comportement déterministe.</p>
+<h3 id="limites-du-modèle">Limites du modèle</h3>
 <p>La qualité des réponses dépendra de plusieurs facteurs :</p>
 <ul>
 <li>qualité des descriptions OpenAgenda ;</li>
@@ -969,75 +950,90 @@ MIN_CHUNK_SIZE = 200
 <li>capacité du modèle à respecter le contexte fourni ;</li>
 <li>présence ou absence d’informations suffisantes dans les événements collectés.</li>
 </ul>
-<p>L’utilisation d’un système RAG réduit le risque de réponse inventée, mais ne le supprime pas complètement. Une première évaluation automatique a été mise en place sur un jeu annoté de 15 questions ; elle devra être enrichie pour obtenir une mesure plus robuste.</p>
-<h2 id="5-base-vectorielle-et-recherche-semantique">5. Base vectorielle et recherche sémantique</h2>
-<h4 id="integration-avec-langchain">Intégration avec LangChain</h4>
-<p>Le système utilise désormais le vector store FAISS fourni par LangChain (<code>langchain_community.vectorstores.FAISS</code>). Les chunks OpenAgenda sont convertis en objets <code>Document</code>, indexés avec les embeddings Mistral, puis sauvegardés localement dans <code>vector_store/</code>.</p>
-<p>Au moment de répondre à une question, <code>RagService</code> recharge cet index, crée un retriever avec <code>.as_retriever(search_kwargs={"k": 5})</code>, récupère les documents pertinents, puis injecte leur contenu dans un <code>ChatPromptTemplate</code> avant l’appel à Mistral.</p>
-<p>Cette approche garde le pipeline métier existant tout en utilisant les abstractions LangChain standard : vector store, retriever et prompt template.</p>
-<h3 id="base-vectorielle-et-recherche-semantique">Base vectorielle et recherche sémantique</h3>
-<p>Le vector store LangChain s'appuie en interne sur un index <code class="badge-tech">IndexFlatL2</code> construit par <code>langchain_community.vectorstores.FAISS</code>.</p>
-<p>Ce type d'index est adapté au POC car :</p>
-<ul>
-<li>le volume de données est faible ;</li>
-<li>l’index est simple à construire ;</li>
-<li>la recherche est exacte ;</li>
-<li>le fonctionnement est facile à expliquer.</li>
-</ul>
-<p><code class="badge-tech">IndexFlatL2</code> utilise une distance L2 pour comparer les vecteurs. Plus la distance est faible, plus le chunk est considéré comme proche de la requête utilisateur.</p>
-<p>Dans le corpus actuel, le pipeline produit :</p>
-<div class="highlight"><pre><span></span><code>138 documents OpenAgenda
-→ 155 chunks
-→ 155 embeddings
-→ 155 vecteurs dans FAISS
-</code></pre></div>
-
-<p>Le nombre de vecteurs est supérieur au nombre de documents car certains documents longs sont découpés en plusieurs chunks.</p>
-<h3 id="strategie-de-persistance">Stratégie de persistance</h3>
-<p>Le vector store est sauvegardé localement dans le dossier :</p>
-<div class="highlight"><pre><span></span><code>vector_store/
-</code></pre></div>
-
-<p>Le format actif est celui produit par <code>vectorstore.save_local()</code> de LangChain, qui génère deux fichiers :</p>
-<div class="highlight"><pre><span></span><code>vector_store/index.faiss
-vector_store/index.pkl
-</code></pre></div>
-
-<p>Le fichier <code>index.faiss</code> contient les vecteurs numériques utilisés par FAISS pour la recherche.</p>
-<p>Le fichier <code>index.pkl</code> contient le docstore LangChain : il associe chaque vecteur à un <code>Document</code> (texte du chunk + métadonnées de l'événement).</p>
-<p>Ces fichiers sont générés localement et ne doivent pas être versionnés dans Git. Le script de reconstruction supprime explicitement un éventuel ancien <code>metadata.json</code> résiduel pour éviter toute ambiguïté avec l'ancien format maison.</p>
-<h3 id="metadonnees-associees">Métadonnées associées</h3>
-<p>Chaque vecteur est associé à un <code>Document</code> LangChain. Les métadonnées sont stockées dans <code>document.metadata</code> (dict à plat) et contiennent notamment :</p>
-<ul>
-<li><code>event_id</code> ;</li>
-<li><code>chunk_id</code> ;</li>
-<li><code>chunk_index</code> ;</li>
-<li><code>chunk_count</code> ;</li>
-<li><code>title</code>, <code>city</code>, <code>start_date</code>, <code>url</code> (issus des métadonnées événement) ;</li>
-<li>les autres champs OpenAgenda utiles (<code>location_name</code>, <code>latitude</code>, <code>longitude</code>, etc.).</li>
-</ul>
-<p>LangChain s'occupe du mapping entre l'index FAISS et le <code>Document</code> : après une recherche vectorielle, <code>retriever.invoke(question)</code> retourne directement une liste de <code>Document</code>, avec leur <code>page_content</code> (texte du chunk) et leur <code>metadata</code> prêts à l'emploi.</p>
+<p>L’utilisation d’un système RAG réduit le risque de réponse inventée, mais ne le supprime pas complètement. L’évaluation automatique repose sur un jeu annoté de 15 questions, qui peut être enrichi pour obtenir une mesure plus robuste.</p>
+<h2 id="5-base-vectorielle-et-recherche-sémantique">5. Base vectorielle et recherche sémantique</h2>
+<h3 id="intégration-avec-langchain">Intégration avec LangChain</h3>
+<p>Le système utilise le vector store FAISS fourni par LangChain (<code>langchain_community.vectorstores.FAISS</code>). Les chunks OpenAgenda sont convertis en objets <code>Document</code>, indexés avec les embeddings Mistral, puis sauvegardés localement dans <code>vector_store/</code>.</p>
+<p>LangChain apporte trois abstractions utiles dans le projet :</p>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Rôle dans Écho</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Document</code></td>
+<td>Associer un texte de chunk à ses métadonnées.</td>
+</tr>
+<tr>
+<td><code class="badge-tech">FAISS</code></td>
+<td>Stocker les vecteurs et effectuer la recherche de similarité.</td>
+</tr>
+<tr>
+<td><code>Retriever</code></td>
+<td>Interroger FAISS depuis <code>RagService</code> avec <code>.as_retriever(search_kwargs={"k": 5})</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Au moment de répondre à une question, <code>RagService</code> charge l’index, récupère les documents pertinents avec le retriever, puis transmet leur contenu à la chaîne de génération.</p>
+<h3 id="recherche-vectorielle">Recherche vectorielle</h3>
+<p>Le vector store LangChain s’appuie sur un index FAISS <code class="badge-tech">IndexFlatL2</code>. Ce choix est adapté au POC car le volume de données est faible, l’index est simple à construire et la recherche reste exacte.</p>
+<p><code class="badge-tech">IndexFlatL2</code> compare les vecteurs avec une distance L2 : plus la distance est faible, plus le chunk est proche de la question utilisateur.</p>
+<p>Dans le corpus utilisé, le pipeline produit <code>138</code> documents OpenAgenda, découpés en <code>155</code> chunks. Chaque chunk reçoit un embedding, ce qui donne <code>155</code> vecteurs dans FAISS.</p>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Le nombre de vecteurs est supérieur au nombre de documents, car certains événements longs sont découpés en plusieurs chunks.</p></div></div>
+<h3 id="persistance-de-lindex">Persistance de l’index</h3>
+<p>Le vector store est sauvegardé localement dans le dossier <code>vector_store/</code> avec le format LangChain :</p>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vector_store/index.faiss</code></td>
+<td>Vecteurs numériques utilisés par FAISS.</td>
+</tr>
+<tr>
+<td><code>vector_store/index.pkl</code></td>
+<td>Docstore LangChain : texte des chunks et métadonnées associées.</td>
+</tr>
+</tbody>
+</table>
+<p>Ces fichiers sont générés localement et ne sont pas versionnés dans Git. Le script de reconstruction nettoie aussi les fichiers résiduels éventuels afin de garder un dossier <code>vector_store/</code> cohérent.</p>
+<h3 id="métadonnées-associées">Métadonnées associées</h3>
+<p>Les métadonnées des événements sont conservées dans les <code>Document</code> LangChain associés aux chunks. Elles ont déjà été préparées lors de la construction des documents RAG, puis sont réutilisées après la recherche pour afficher les sources.</p>
+<p>Après une recherche vectorielle, <code>retriever.invoke(question)</code> retourne une liste de <code>Document</code> : le texte du chunk est disponible dans <code>page_content</code>, et les informations utiles à l’affichage des sources restent disponibles dans <code>metadata</code>.</p>
 <h3 id="reconstruction-de-lindex">Reconstruction de l’index</h3>
 <p>L’index peut être reconstruit avec la commande suivante :</p>
 <div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/rebuild_index.py
 </code></pre></div>
 
-<p>Cette commande régénère entièrement le vector store à partir des documents pré-processés.</p>
-<p>Elle exécute les étapes suivantes :</p>
+<p>Cette commande régénère entièrement le vector store à partir des documents pré-processés :</p>
 <ol>
-<li>chargement des documents depuis <code>data/processed/events_documents.jsonl</code> ;</li>
-<li>construction des chunks ;</li>
-<li>génération des embeddings avec Mistral ;</li>
-<li>conversion des chunks en <code>Document</code> LangChain ;</li>
-<li>construction du vector store FAISS LangChain (<code>FAISS.from_embeddings</code>) ;</li>
-<li>sauvegarde de <code>index.faiss</code> et <code>index.pkl</code> dans <code>vector_store/</code> via <code>save_local()</code>.</li>
+<li>charger <code>data/processed/events_documents.jsonl</code> ;</li>
+<li>construire les chunks ;</li>
+<li>générer les embeddings Mistral ;</li>
+<li>convertir les chunks en <code>Document</code> LangChain ;</li>
+<li>construire le vector store FAISS ;</li>
+<li>sauvegarder <code>index.faiss</code> et <code>index.pkl</code> dans <code>vector_store/</code>.</li>
 </ol>
-<p>Cette reconstruction est utile lorsque les données changent ou lorsque la stratégie de chunking est modifiée. Dans cette première version, l’index est reconstruit entièrement plutôt que mis à jour partiellement. Ce choix est plus simple et plus fiable pour un POC.</p>
-<h2 id="6-api-et-endpoints-exposes">6. API et endpoints exposés</h2>
-<h3 id="framework-utilise">Framework utilisé</h3>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>L’index est reconstruit entièrement plutôt que mis à jour partiellement.</p></div></div>
+<h2 id="6-api-et-endpoints-exposés">6. API et endpoints exposés</h2>
+<h3 id="framework-utilisé">Framework utilisé</h3>
 <p>L’API du projet est implémentée avec FastAPI, dans le dossier <a href="../echo_app/api/"><code>echo_app/api/</code></a>.</p>
-<p>FastAPI est adapté au POC car il permet de créer rapidement une API Python typée, documentée automatiquement via Swagger et facile à tester avec <code>TestClient</code>.</p>
-<h3 id="endpoints-exposes">Endpoints exposés</h3>
+<p>FastAPI est utilisé car il permet de construire une API Python typée, documentée automatiquement via Swagger, et facile à tester avec <code>TestClient</code>.</p>
+<h3 id="exécution-locale-avec-docker">Exécution locale avec Docker</h3>
+<p>L’API peut être lancée localement avec Docker Compose. Cette approche permet de tester le service dans un environnement reproductible, sans dépendre directement de l’environnement Python local.</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
+</code></pre></div>
+
+<p>Au démarrage, l’application affiche l’URL de la documentation Swagger afin de faciliter les tests manuels dans le navigateur : http://127.0.0.1:8000/docs.</p>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Le vector store FAISS doit être disponible localement dans vector_store/ pour que l’API puisse répondre aux questions. Il reste généré localement et n’est pas versionné dans Git.</p></div></div>
+<h3 id="endpoints-exposés">Endpoints exposés</h3>
 <p>L’API expose quatre endpoints principaux :</p>
 <table>
 <thead>
@@ -1066,10 +1062,10 @@ vector_store/index.pkl
 </tbody>
 </table>
 <p>La documentation interactive Swagger est générée automatiquement par FastAPI et disponible sur <code>/docs</code> lorsque l’API est lancée localement.</p>
-<h3 id="separation-api-logique-metier">Séparation API / logique métier</h3>
+<h3 id="séparation-api-logique-métier">Séparation API / logique métier</h3>
 <p>La couche API ne réimplémente pas la logique RAG. L’endpoint <code>POST /ask</code> appelle directement <code>RagService.ask(question)</code>, qui orchestre le retriever FAISS LangChain, la construction du contexte, le prompt LangChain et l’appel Mistral.</p>
 <p>La reconstruction de l’index est portée par <code>echo_app.indexing.rebuild.rebuild_index()</code>. Cette fonction est utilisée à la fois par le script CLI <code>scripts/rebuild_index.py</code> et par l’endpoint <code>POST /rebuild</code>, ce qui évite de dupliquer la logique.</p>
-<h3 id="format-des-requetes-et-reponses">Format des requêtes et réponses</h3>
+<h3 id="format-des-requêtes-et-réponses">Format des requêtes et réponses</h3>
 <p>Exemple de requête pour <code>/ask</code> :</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Quels événements autour de l’astronomie sont disponibles ?&quot;</span>
@@ -1098,26 +1094,21 @@ vector_store/index.pkl
 <p>Les principaux comportements testés sont :</p>
 <ul>
 <li><code>/health</code> retourne un statut minimal ;</li>
-<li><code>/metadata</code> retourne les informations techniques attendues sans appel Mistral ni chargement FAISS ;</li>
+<li><code>/metadata</code> expose les informations attendues sans appeler Mistral ni charger FAISS ;</li>
 <li><code>/ask</code> délègue bien à <code>RagService.ask()</code> ;</li>
-<li>une question vide ou composée uniquement d’espaces retourne une erreur claire ;</li>
+<li>une question vide retourne une erreur claire ;</li>
 <li><code>/rebuild</code> refuse une reconstruction sans <code>confirm=true</code> ;</li>
-<li>une erreur inattendue pendant <code>/ask</code> ou <code>/rebuild</code> retourne une erreur générique sans exposer de trace Python.</li>
+<li>une erreur inattendue retourne une erreur générique sans exposer de trace Python.</li>
 </ul>
 <p>Un script fonctionnel manuel <a href="../scripts/api_test.py"><code>scripts/api_test.py</code></a> permet également de tester une API déjà lancée localement. Par défaut, il vérifie <code>/health</code>, <code>/metadata</code>, <code>/ask</code> et le refus de <code>/rebuild</code> sans confirmation. Le rebuild réel est optionnel afin d’éviter des appels Mistral coûteux pendant un test rapide.</p>
-<h3 id="limites-de-lapi">Limites de l’API</h3>
-<p><code>POST /rebuild</code> est un endpoint utile pour le POC local, mais il est sensible : il peut reconstruire l’index, déclencher des appels embeddings et invalider le cache du retriever. En production, il devrait être protégé par une authentification, limité à un rôle administrateur ou remplacé par une tâche interne planifiée hors du chemin HTTP public.</p>
-<h2 id="7-evaluation-du-systeme">7. Évaluation du système</h2>
-<h3 id="etat-actuel-de-levaluation">État actuel de l’évaluation</h3>
-<p>L’évaluation automatique est implémentée via le script <code>scripts/08_evaluate_rag.py</code>. Elle rejoue les 15 questions du jeu annoté sur <code>RagService.ask(question, include_contexts=True)</code> et calcule deux familles de métriques :</p>
+<h2 id="7-évaluation-du-système">7. Évaluation du système</h2>
+<p>L’évaluation automatique est implémentée via <code>scripts/08_evaluate_rag.py</code>. Elle rejoue 15 questions issues d’un jeu annoté et calcule deux familles de métriques :</p>
 <ul>
-<li><strong>Évaluation principale — Ragas</strong> (<code>faithfulness</code>, <code>answer_relevancy</code>, <code>context_precision</code>, <code>context_recall</code>), calculée par un LLM juge Mistral (<code class="badge-tech">mistral-small-latest</code> + <code class="badge-tech">mistral-embed</code>) ; elle mesure la fidélité de la réponse au contexte récupéré et la qualité du retrieval ;</li>
-<li><strong>Métriques maison complémentaires</strong> (<code>keyword_match_rate</code>, <code>event_recall</code>, <code>sources_count</code>, <code>status</code>) conservées comme signaux d’analyse lisibles à la main, sans dépendre du juge.</li>
+<li><strong>Évaluation principale — Ragas</strong> : mesure la fidélité de la réponse au contexte récupéré et la qualité du retrieval ;</li>
+<li><strong>Métriques maison complémentaires</strong> : signaux d’analyse lisibles à la main, sans dépendre du LLM juge.</li>
 </ul>
-<p>Cette évaluation donne une base reproductible pour suivre la qualité des réponses, tout en restant volontairement limitée : elle ne remplace pas une analyse humaine et les scores Ragas peuvent légèrement varier d’une exécution à l’autre malgré <code>temperature=0</code> côté juge.</p>
-<p>Une validation manuelle complémentaire reste possible via <code>scripts/07_test_rag_service.py</code> (chaîne RAG complète sur quelques questions types) et <code>scripts/06_test_semantic_search.py</code> (recherche sémantique seule).</p>
-<h3 id="jeu-de-test-annote">Jeu de test annoté</h3>
-<p>Un premier jeu de questions/réponses annoté a été créé et stocké dans <a href="../data/evaluation/qa_annotated.csv"><code>data/evaluation/qa_annotated.csv</code></a>. Il contient 15 questions couvrant plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.</p>
+<h3 id="jeu-de-test-annoté">Jeu de test annoté</h3>
+<p>Le jeu de questions/réponses annoté est stocké dans <a href="../data/evaluation/qa_annotated.csv"><code>data/evaluation/qa_annotated.csv</code></a>. Il contient 15 questions couvrant plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.</p>
 <div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Le jeu contient aussi un cas hors sujet lié à une demande de restaurant, afin de vérifier que le système ne force pas une réponse quand le contexte ne le permet pas.</p></div></div>
 <p>Chaque ligne du CSV contient cinq colonnes :</p>
 <ul>
@@ -1150,133 +1141,131 @@ vector_store/index.pkl
 </tbody>
 </table>
 <p>Ce jeu sert de base à l’évaluation automatique : le script vérifie notamment les sources attendues et la présence de mots-clés dans la réponse générée.</p>
-<h3 id="evaluation-automatique">Évaluation automatique</h3>
-<p>Le script <code>scripts/08_evaluate_rag.py</code> exécute l’évaluation complète sur les 15 questions annotées. Le format est volontairement minimal :</p>
-<ul>
-<li><code>datasets.Dataset.from_dict</code> avec les colonnes <code>question</code>, <code>answer</code>, <code>contexts</code>, <code>ground_truth</code> ;</li>
-<li><code>ChatMistralAI</code> + <code>MistralAIEmbeddings</code> (langchain-mistralai) passés directement à <code>ragas.evaluate</code> (sans wrapper Ragas explicite, qui est par ailleurs déprécié) ;</li>
-<li>4 métriques Ragas standards : <code>faithfulness</code>, <code>answer_relevancy</code>, <code>context_precision</code>, <code>context_recall</code>.</li>
-</ul>
-<p>Le <strong>LLM juge</strong> utilisé par Ragas est <code class="badge-tech">mistral-large-latest</code>. Il est volontairement différent du modèle de production de la chaîne RAG (<code class="badge-tech">mistral-small-latest</code>) : <code>mistral-small</code> respecte moins bien les schémas Pydantic attendus par les prompts legacy de Ragas (échec récurrent du parser <code>StringIO</code>), tandis que <code>mistral-large</code> les suit fidèlement. La chaîne RAG d'Écho côté production n'est pas affectée par ce choix, qui ne concerne que l'évaluation.</p>
-<p><strong>Pipeline en deux étapes</strong> :</p>
+<h3 id="méthode-dévaluation">Méthode d’évaluation</h3>
+<p>La méthode d’évaluation repose sur deux étapes :</p>
 <ol>
-<li><strong>15 appels Mistral</strong> (étape 1) — pour chaque question, le script appelle <code>RagService.ask(question, include_contexts=True)</code> afin de récupérer la réponse, les sources et les chunks utilisés. Un log lisible par ligne affiche <code>chunks=… | sources=… | attendu=… | status=…</code>.</li>
-<li><strong>15 × 4 = 60 jobs Ragas</strong> (étape 2) — chaque job peut déclencher 1 ou 2 appels Mistral supplémentaires (LLM juge + embeddings) selon la métrique.</li>
+<li>exécuter la chaîne RAG sur chaque question annotée pour récupérer la réponse, les sources et les chunks utilisés ;</li>
+<li>transmettre ces éléments à Ragas pour calculer les métriques d’évaluation.</li>
 </ol>
-<p><strong>Métriques Ragas (évaluation principale)</strong> :</p>
-<ul>
-<li><code>faithfulness</code> : la réponse reste-t-elle fidèle aux contextes récupérés (pas d’invention) ?</li>
-<li><code>answer_relevancy</code> : la réponse est-elle réellement pertinente vis-à-vis de la question posée ?</li>
-<li><code>context_precision</code> : les chunks pertinents sont-ils bien placés en tête du retrieval ?</li>
-<li><code>context_recall</code> : le retrieval couvre-t-il bien la réponse de référence attendue ?</li>
-</ul>
-<div class="callout callout-warning"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span class="callout-label">Attention</span></div><div class="callout-body"><p><strong>Note technique sur <code>answer_relevancy</code></strong> : la métrique est instanciée explicitement avec <code>AnswerRelevancy(strictness=1)</code> au lieu du singleton par défaut (<code>strictness=3</code>). Le défaut plante en effet avec <code>langchain-mistralai 1.1.4</code> (<code>TypeError: unsupported operand type(s) for +=: 'dict' and 'dict'</code> lors de l’agrégation des <code>n=3</code> complétions parallèles). Avec <code>strictness=1</code>, une seule question alternative est générée par réponse pour le calcul de similarité — score légèrement moins robuste mais reproductible.</p></div></div>
-<p><strong>Métriques maison (colonnes complémentaires)</strong> — calculées sans LLM juge, lisibles à la main :</p>
-<ul>
-<li><code>keyword_match_rate</code> : proportion de mots-clés attendus retrouvés dans la réponse (lowercase, sous-chaîne) ;</li>
-<li><code>event_recall</code> : proportion d’<code>event_ids</code> attendus retrouvés dans les sources ;</li>
-<li><code>sources_count</code> : nombre de sources distinctes affichées à l’utilisateur ;</li>
-<li><code>status</code> (<code>ok</code> / <code>partial</code> / <code>ko</code>) résumant la cohérence globale :</li>
-</ul>
+<p>Le <strong>LLM juge</strong> utilisé par Ragas est <code class="badge-tech">mistral-large-latest</code>. Il est volontairement différent du modèle de génération d’Écho (<code class="badge-tech">mistral-small-latest</code>) : il respecte mieux les schémas de sortie attendus par Ragas. Ce choix concerne uniquement l’évaluation et ne modifie pas la chaîne RAG utilisée pour répondre aux utilisateurs.</p>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>L’évaluation peut déclencher plusieurs appels Mistral supplémentaires, car Ragas utilise un LLM juge et des embeddings pour calculer ses métriques.</p></div></div>
+<p>Les métriques Ragas utilisées sont :</p>
 <table>
 <thead>
 <tr>
-<th>Status</th>
-<th>Signification</th>
+<th>Métrique</th>
+<th>Ce qu’elle vérifie</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ok</code></td>
-<td>La réponse retrouve au moins une source attendue et suffisamment de mots-clés, ou refuse correctement un cas hors sujet.</td>
+<td><code>faithfulness</code></td>
+<td>La réponse reste fidèle aux contextes récupérés.</td>
 </tr>
 <tr>
-<td><code>partial</code></td>
-<td>La réponse est partiellement pertinente, mais une source attendue ou une partie des mots-clés manque.</td>
+<td><code>answer_relevancy</code></td>
+<td>La réponse est pertinente par rapport à la question.</td>
 </tr>
 <tr>
-<td><code>ko</code></td>
-<td>La réponse ne retrouve ni les sources attendues ni les informations clés.</td>
+<td><code>context_precision</code></td>
+<td>Les chunks pertinents sont bien placés dans les résultats.</td>
+</tr>
+<tr>
+<td><code>context_recall</code></td>
+<td>Le retrieval couvre les informations attendues.</td>
 </tr>
 </tbody>
 </table>
-<p>Les résultats sont versionnés pour conserver une trace de la dernière évaluation :</p>
+<div class="callout callout-warning"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span class="callout-label">Attention</span></div><div class="callout-body"><p>La métrique <code>answer_relevancy</code> est instanciée avec <code>strictness=1</code> pour éviter un problème d’agrégation observé avec <code>langchain-mistralai 1.1.4</code>. Le score est donc un peu moins robuste que le réglage par défaut, mais l’évaluation reste reproductible.</p></div></div>
+<p>Des métriques maison complètent Ragas pour faciliter la relecture manuelle :</p>
+<table>
+<thead>
+<tr>
+<th>Métrique</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>keyword_match_rate</code></td>
+<td>Vérifier la présence des mots-clés attendus dans la réponse.</td>
+</tr>
+<tr>
+<td><code>event_recall</code></td>
+<td>Vérifier la présence des événements attendus dans les sources.</td>
+</tr>
+<tr>
+<td><code>sources_count</code></td>
+<td>Contrôler le nombre de sources affichées.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>Résumer le résultat en <code>ok</code>, <code>partial</code> ou <code>ko</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Les résultats sont versionnés dans <code>data/evaluation/</code> :</p>
 <ul>
-<li><a href="../data/evaluation/rag_evaluation_results.csv"><code>data/evaluation/rag_evaluation_results.csv</code></a> : résultats détaillés, une ligne par question, colonnes maison + 4 colonnes Ragas ;</li>
-<li><a href="../data/evaluation/rag_evaluation_summary.json"><code>data/evaluation/rag_evaluation_summary.json</code></a> : résumé agrégé (compteurs status, moyennes maison et moyennes Ragas) ;</li>
-<li><a href="../data/evaluation/rag_evaluation.log"><code>data/evaluation/rag_evaluation.log</code></a> : sortie console de la dernière exécution validée (étape 1 ligne par ligne + résumé final), conservée pour pouvoir relire les logs sans relancer les ~34 minutes d'évaluation.</li>
+<li><a href="../data/evaluation/rag_evaluation_results.csv"><code>rag_evaluation_results.csv</code></a> : résultats détaillés, une ligne par question ;</li>
+<li><a href="../data/evaluation/rag_evaluation_summary.json"><code>rag_evaluation_summary.json</code></a> : résumé agrégé ;</li>
+<li><a href="../data/evaluation/rag_evaluation.log"><code>rag_evaluation.log</code></a> : sortie console de l’exécution de référence.</li>
 </ul>
 <div class="callout callout-important"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18L12 3 3 21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span class="callout-label">Important</span></div><div class="callout-body"><p>Cette évaluation ne remplace pas une revue humaine, mais elle donne une base reproductible pour repérer les régressions. La génération est stabilisée avec <code>SEED=42</code> et <code>temperature=0.2</code> côté chaîne RAG, <code>temperature=0</code> côté juge Ragas.</p></div></div>
 <p>Le notebook <a href="../notebooks/04_rag_evaluation.ipynb"><code>notebooks/04_rag_evaluation.ipynb</code></a> permet de visualiser le jeu annoté, les résultats générés et les cas <code>partial</code> / <code>ko</code>. Il lit les fichiers CSV/JSON déjà produits et ne relance pas les appels Mistral à l’ouverture.</p>
 <h3 id="analyse-des-erreurs">Analyse des erreurs</h3>
 <p>L’évaluation lancée sur les 15 questions annotées avec le pipeline final donne le résumé suivant :</p>
-
-<section class="metric-block">
-  <div class="metric-block-header">
-    <span class="metric-block-eyebrow">Évaluation Ragas — 15 questions annotées</span>
-    <span class="metric-block-title">Scores agrégés du pipeline final</span>
-  </div>
-  
-<div class="metric-status">
-  <div class="metric-status-item ok">
-    <span class="metric-status-num">14</span>
-    <span class="metric-status-lbl">OK</span>
-  </div>
-  <div class="metric-status-item partial">
-    <span class="metric-status-num">1</span>
-    <span class="metric-status-lbl">Partial</span>
-  </div>
-  <div class="metric-status-item ko">
-    <span class="metric-status-num">0</span>
-    <span class="metric-status-lbl">KO</span>
-  </div>
-  <div class="metric-status-item total">
-    <span class="metric-status-num">15</span>
-    <span class="metric-status-lbl">Total</span>
-  </div>
-</div>
-
-  <div class="metric-grid">
-<div class="metric-card">
-  <div class="metric-card-label">Faithfulness</div>
-  <div class="metric-card-value">0.927</div>
-  <div class="metric-card-bar"><span style="width:93%"></span></div>
-</div>
-<div class="metric-card">
-  <div class="metric-card-label">Answer relevancy</div>
-  <div class="metric-card-value">0.828</div>
-  <div class="metric-card-bar"><span style="width:83%"></span></div>
-</div>
-<div class="metric-card">
-  <div class="metric-card-label">Context precision</div>
-  <div class="metric-card-value">0.942</div>
-  <div class="metric-card-bar"><span style="width:94%"></span></div>
-</div>
-<div class="metric-card">
-  <div class="metric-card-label">Context recall</div>
-  <div class="metric-card-value">0.867</div>
-  <div class="metric-card-bar"><span style="width:87%"></span></div>
-</div></div>
-  <details class="metric-raw">
-    <summary>Voir le JSON brut</summary>
-    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;partial&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;ko&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_keyword_match_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.83</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_event_recall&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.811</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_faithfulness&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.927</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_answer_relevancy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.828</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_context_precision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.942</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_context_recall&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.867</span>
-<span class="p">}</span>
-</code></pre></div>
-  </details>
-</section>
-
-
-<p>Les 4 métriques Ragas sont calculées pour les 15 questions (0 NaN), et confirment que la chaîne RAG est très fiable :</p>
+<!-- metric-cards -->
+<table>
+<thead>
+<tr>
+<th>Indicateur</th>
+<th style="text-align: right;">Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Questions évaluées</td>
+<td style="text-align: right;">15</td>
+</tr>
+<tr>
+<td><code>ok</code></td>
+<td style="text-align: right;">14</td>
+</tr>
+<tr>
+<td><code>partial</code></td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td><code>ko</code></td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>keyword_match_rate</code> moyen</td>
+<td style="text-align: right;">0.830</td>
+</tr>
+<tr>
+<td><code>event_recall</code> moyen</td>
+<td style="text-align: right;">0.811</td>
+</tr>
+<tr>
+<td><code>faithfulness</code> moyen</td>
+<td style="text-align: right;">0.927</td>
+</tr>
+<tr>
+<td><code>answer_relevancy</code> moyen</td>
+<td style="text-align: right;">0.828</td>
+</tr>
+<tr>
+<td><code>context_precision</code> moyen</td>
+<td style="text-align: right;">0.942</td>
+</tr>
+<tr>
+<td><code>context_recall</code> moyen</td>
+<td style="text-align: right;">0.867</td>
+</tr>
+</tbody>
+</table>
+<p>Les 4 métriques Ragas sont calculées pour les 15 questions, sans valeur manquante. Elles montrent une chaîne RAG globalement fiable :</p>
 <ul>
 <li><code>faithfulness</code> ≈ 0.927 : très peu d’invention, les réponses restent fidèles aux chunks récupérés ;</li>
 <li><code>context_precision</code> ≈ 0.942 : les chunks pertinents sont systématiquement bien placés en tête du retrieval ;</li>
@@ -1284,28 +1273,33 @@ vector_store/index.pkl
 <li><code>answer_relevancy</code> ≈ 0.828 : les réponses générées répondent bien aux questions, à l’exception du cas hors sujet (voir ci-dessous).</li>
 </ul>
 <p>Une seule question est classée <code>partial</code> :</p>
-<table>
-<thead>
-<tr>
-<th>Question</th>
-<th>Observation</th>
-<th>Interprétation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Peux-tu me conseiller un restaurant à Arcachon ?</td>
-<td><code>keyword_match_rate</code> 0.333, <code>event_recall</code> 0 (rien attendu côté event_ids) ; côté Ragas, <code>faithfulness</code> 0.667, <code>context_precision</code> 0.806, <code>context_recall</code> 1.0, <strong><code>answer_relevancy</code> 0.0</strong>. Le système répond prudemment mais 4 sources sont tout de même remontées.</td>
-<td>Le score <code>answer_relevancy</code> à 0 est cohérent et attendu : Ragas détecte que la réponse (un refus) n’est pas alignée avec la question posée. C’est exactement ce qu’on veut sur un cas hors sujet, mais le status maison reste <code>partial</code> parce que des sources sont remontées. La détection automatique du hors sujet côté chaîne RAG reste perfectible.</td>
-</tr>
-</tbody>
-</table>
-<p>Aucun cas n’est classé <code>ko</code>.</p>
+<ul>
+<li><strong>Question</strong> : « Peux-tu me conseiller un restaurant à Arcachon ? »</li>
+<li><strong>Observation</strong> : le système répond prudemment, mais 4 sources sont tout de même remontées.</li>
+<li><strong>Métriques maison</strong> : <ul>
+<li><code>keyword_match_rate = 0.333</code>, </li>
+<li><code>event_recall = 0</code> (aucun événement attendu pour ce cas hors sujet).</li>
+</ul>
+</li>
+<li><strong>Métriques Ragas</strong> : <ul>
+<li><code>faithfulness = 0.667</code>,</li>
+<li><code>context_precision = 0.806</code>, </li>
+<li><code>context_recall = 1.0</code>, </li>
+<li><code>answer_relevancy = 0.0</code>.</li>
+</ul>
+</li>
+<li><strong>Interprétation</strong> : <ul>
+<li>Le score <code>answer_relevancy</code> à <code>0.0</code> est cohérent : Ragas détecte que la réponse, qui est un refus prudent, n’est pas alignée avec la demande de restaurant. </li>
+<li>Le <code>status</code> maison reste <code>partial</code> parce que des sources sont remontées. </li>
+<li>La détection automatique du hors sujet côté chaîne RAG reste donc perfectible.</li>
+</ul>
+</li>
+</ul>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Aucun cas n’est classé <code>ko</code>.</p></div></div>
 <p><strong>Limites connues de l’évaluation :</strong></p>
 <ul>
 <li>jeu de seulement 15 questions, à étendre pour stabiliser les moyennes Ragas ;</li>
 <li>l’exécution déclenche 15 appels Mistral pour la chaîne RAG puis 60 jobs Ragas (15 × 4 métriques, plusieurs appels LLM possibles par job) ; elle consomme du quota et n’est pas lancée en CI ;</li>
-<li>le plan Mistral Experiment (gratuit) impose ~1 RPS implicite, ce qui force <code>RAGAS_MAX_WORKERS=1</code> (sériel) pour ne pas perdre de scores en 429. Conséquence : l’évaluation complète prend ~30-35 min plutôt que ~5 min en parallèle. Avec un plan Scale (6 RPS officiels), <code>max_workers</code> peut être remonté à 4-8 ;</li>
 <li>les scores Ragas peuvent légèrement varier d’une exécution à l’autre malgré <code>temperature=0</code> côté juge ;</li>
 <li><code>answer_relevancy</code> utilise <code>strictness=1</code> (1 question alternative générée au lieu de 3 par défaut), ce qui rend le score un peu moins stable mais évite le bug d’agrégation avec <code>langchain-mistralai 1.1.4</code> ;</li>
 <li>la détection automatique du hors sujet reste perfectible côté chaîne RAG (le seul cas <code>partial</code> est lié à ce point).</li>
@@ -1315,10 +1309,9 @@ vector_store/index.pkl
 <li>ajouter des filtres par commune, date ou gratuité ;</li>
 <li>améliorer la détection des questions hors sujet ;</li>
 <li>ajouter un reranking pour mieux sélectionner les événements les plus pertinents ;</li>
-<li>enrichir le jeu de test annoté avec davantage de cas ;</li>
-<li>passer à un plan Mistral payant pour paralléliser l’évaluation et relever <code>strictness</code> sur <code>answer_relevancy</code> dès qu’une version corrigée de <code>langchain-mistralai</code> rendra l’agrégation <code>n &gt; 1</code> fiable.</li>
+<li>enrichir le jeu de test annoté avec davantage de cas.</li>
 </ul>
-<h3 id="validation-technique-actuelle">Validation technique actuelle</h3>
+<h3 id="validation-technique">Validation technique</h3>
 <p>La recherche sémantique peut être vérifiée manuellement avec le script suivant :</p>
 <div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/06_test_semantic_search.py
 </code></pre></div>
@@ -1331,32 +1324,17 @@ vector_store/index.pkl
 <li><code>exposition Bassin d’Arcachon</code> ;</li>
 <li><code>événement gratuit</code>.</li>
 </ul>
-<h3 id="resultats-observes">Résultats observés</h3>
+<h3 id="résultats-observés">Résultats observés</h3>
 <p>La requête <code>astronomie</code> retrouve bien les chunks associés à l’événement :</p>
 <div class="highlight"><pre><span></span><code>Initiation à l&#39;astronomie à Lanton
 </code></pre></div>
 
-<p>Cela valide le fonctionnement de la chaîne :</p>
-<div class="highlight"><pre><span></span><code>requête utilisateur
-→ embedding Mistral via l’adaptateur LangChain
-→ retriever FAISS LangChain
-→ récupération des Documents pertinents
-→ contexte RAG + sources
-</code></pre></div>
-
+<p>Cela valide le fonctionnement de la chaîne : requête utilisateur → embedding Mistral via l’adaptateur LangChain → retriever FAISS LangChain → récupération des documents pertinents → contexte RAG + sources.</p>
 <p>Certaines requêtes composées donnent des résultats moins précis. Par exemple, une requête combinant un type d’événement et une commune peut favoriser la commune plutôt que le type d’événement.</p>
-<p>Cette limite est normale pour une première recherche sémantique brute, sans filtre métier ni reranking.</p>
-<h3 id="evaluation-cible">Évaluation cible</h3>
-<p>L’évaluation actuelle (Ragas + métriques maison) reste à étendre au-delà de ce premier jeu de 15 questions. Les pistes principales sont :</p>
-<ul>
-<li>élargir le jeu annoté pour couvrir plus largement les intentions utilisateur et stabiliser les moyennes Ragas ;</li>
-<li>mesurer la précision en plus du rappel côté métriques maison (pour pénaliser les réponses qui remontent trop d’événements hors sujet) ;</li>
-<li>intégrer une note qualitative humaine sur un sous-ensemble pour calibrer les seuils du <code>status</code> et croiser avec les scores Ragas ;</li>
-<li>envisager l’exécution de l’évaluation en intégration continue (avec budget LLM dédié) dès qu’une couverture suffisante sera atteinte.</li>
-</ul>
+<p>Cette limite vient du fonctionnement d’une recherche sémantique brute, sans filtre métier ni reranking.</p>
 <h2 id="8-recommandations-et-perspectives">8. Recommandations et perspectives</h2>
 <h3 id="ce-qui-fonctionne-bien">Ce qui fonctionne bien</h3>
-<p>Le POC valide déjà plusieurs briques importantes :</p>
+<p>Le POC valide plusieurs briques importantes :</p>
 <ul>
 <li>les données OpenAgenda peuvent être collectées et préparées ;</li>
 <li>les événements peuvent être transformés en documents Markdown ;</li>
@@ -1368,16 +1346,16 @@ vector_store/index.pkl
 <li>la chaîne RAG combine recherche, prompt contrôlé et génération Mistral pour produire une réponse structurée avec sources.</li>
 </ul>
 <h3 id="limites-du-poc">Limites du POC</h3>
-<p>Cette première version présente plusieurs limites :</p>
+<p>Le POC présente plusieurs limites :</p>
 <ul>
 <li>la qualité dépend fortement des descriptions OpenAgenda ;</li>
 <li>les événements très courts donnent parfois peu de contexte au modèle d’embedding ;</li>
 <li>la recherche sémantique brute ne gère pas encore parfaitement les requêtes composées ;</li>
-<li>les filtres métier par date, commune ou gratuité ne sont pas encore appliqués directement ;</li>
+<li>les filtres métier par date, commune ou gratuité ne sont pas appliqués directement dans la recherche ;</li>
 <li>l’index doit être reconstruit lorsque les données changent ;</li>
-<li>l’endpoint <code>/rebuild</code> est disponible pour le POC local, mais devrait être protégé ou externalisé en production.</li>
+<li>l’endpoint <code>/rebuild</code> est pratique en local, mais devrait être protégé ou externalisé en production.</li>
 </ul>
-<h3 id="ameliorations-possibles">Améliorations possibles</h3>
+<h3 id="améliorations-possibles">Améliorations possibles</h3>
 <p>Les améliorations possibles sont :</p>
 <ul>
 <li>ajouter des filtres sur les métadonnées, par exemple ville, date ou gratuité ;</li>
@@ -1386,15 +1364,17 @@ vector_store/index.pkl
 <li>améliorer le prompt de génération ;</li>
 <li>enrichir l’évaluation automatique (jeu de test plus grand, métriques sémantiques) ;</li>
 <li>affiner la détection du hors sujet pour éviter les faux négatifs côté métrique ;</li>
-<li>préparer le déploiement de l’API avec Docker et sécuriser les endpoints sensibles.</li>
+<li>renforcer la sécurité des endpoints sensibles si l’API est exposée publiquement.</li>
 </ul>
-<h2 id="9-organisation-du-depot-github">9. Organisation du dépôt GitHub</h2>
+<h2 id="9-organisation-du-dépôt-github">9. Organisation du dépôt GitHub</h2>
 <p>L’organisation du dépôt est la suivante :</p>
 <div class="highlight"><pre><span></span><code>oc_project9_rag/
 ├── data/                  # Données brutes et transformées, non versionnées
 ├── docs/                  # Documentation projet et rapport technique
+├── Dockerfile             # Image Docker de l’API
+├── docker-compose.yml     # Lancement local de l’API avec Docker Compose
 ├── echo_app/              # Code de l’application Écho
-│   ├── api/               # API FastAPI cible
+│   ├── api/               # API FastAPI
 │   ├── indexing/          # Embeddings, FAISS et recherche sémantique
 │   └── rag/               # Chaîne RAG 
 ├── notebooks/             # Notebooks d’exploration et de validation
@@ -1404,31 +1384,52 @@ vector_store/index.pkl
 └── vector_store/          # Index FAISS généré localement, non versionné
 </code></pre></div>
 
-<h3 id="fichiers-et-dossiers-cles">Fichiers et dossiers clés</h3>
+<h3 id="fichiers-et-dossiers-clés">Fichiers et dossiers clés</h3>
 <p>Les principaux fichiers et dossiers sont :</p>
 <ul>
+<li>Dossier <code>src</code><ul>
 <li><code>src/openagenda.py</code> : client simple pour l’API OpenAgenda ;</li>
 <li><code>src/preprocessing.py</code> : nettoyage et normalisation des événements ;</li>
 <li><code>src/documents.py</code> : construction des documents RAG ;</li>
 <li><code>src/chunking.py</code> : découpage des documents en chunks ;</li>
+</ul>
+</li>
+<li>Dossier <code>echo_app</code><ul>
 <li><code>echo_app/indexing/embeddings.py</code> : génération des embeddings Mistral ;</li>
 <li><code>echo_app/indexing/langchain_embeddings.py</code> : adaptateur embeddings Mistral compatible LangChain ;</li>
 <li><code>echo_app/indexing/langchain_faiss_store.py</code> : construction, sauvegarde et chargement du vector store FAISS LangChain ;</li>
 <li><code>echo_app/indexing/rebuild.py</code> : reconstruction de l’index réutilisée par le script CLI et l’API ;</li>
 <li><code>echo_app/indexing/search.py</code> : recherche sémantique via le vector store FAISS LangChain ;</li>
-<li><code>echo_app/indexing/faiss_store.py</code> : ancienne implémentation FAISS bas niveau conservée pour compatibilité et tests ;</li>
 <li><code>echo_app/rag/rag_service.py</code> : chaîne RAG (recherche, contexte, prompt, génération, sources) ;</li>
 <li><code>echo_app/rag/prompts.py</code> : prompts métier d’Écho (prompt système et prompt utilisateur) ;</li>
 <li><code>echo_app/rag/langchain_chain.py</code> : assemblage des messages du prompt via LangChain ;</li>
 <li><code>echo_app/api/main.py</code> : endpoints FastAPI <code>/health</code>, <code>/metadata</code>, <code>/ask</code> et <code>/rebuild</code> ;</li>
 <li><code>echo_app/api/schemas.py</code> : schémas Pydantic de l’API ;</li>
+</ul>
+</li>
+<li>Dossier <code>scripts</code><ul>
 <li><code>scripts/rebuild_index.py</code> : wrapper CLI de reconstruction de l’index ;</li>
 <li><code>scripts/api_test.py</code> : test fonctionnel manuel de l’API locale ;</li>
-<li><code>scripts/06_test_semantic_search.py</code> : test manuel de la recherche sémantique ;</li>
-<li><code>scripts/07_test_rag_service.py</code> : test manuel de la chaîne RAG complète ;</li>
 <li><code>scripts/08_evaluate_rag.py</code> : évaluation automatique sur le jeu de test annoté ;</li>
+</ul>
+</li>
+<li>Dossier <code>data/evaluation</code><ul>
+<li><code>data/evaluation/qa_annotated.csv</code> : jeu de questions/réponses annoté ;</li>
+<li><code>data/evaluation/rag_evaluation_results.csv</code> : résultats détaillés de l’évaluation ;</li>
+<li><code>data/evaluation/rag_evaluation_summary.json</code> : résumé agrégé des scores ;</li>
+<li><code>data/evaluation/rag_evaluation.log</code> : log d’exécution de référence de l’évaluation Ragas ;</li>
+</ul>
+</li>
+<li>Fichiers Docker<ul>
+<li><code>Dockerfile</code> : image Docker de l’API FastAPI ;</li>
+<li><code>docker-compose.yml</code> : lancement local du service API ;</li>
+</ul>
+</li>
+<li>Dossier <code>notebooks</code><ul>
 <li><code>notebooks/03_faiss_indexing.ipynb</code> : exploration du chunking, de FAISS et de la recherche ;</li>
 <li><code>notebooks/04_rag_evaluation.ipynb</code> : visualisation du jeu annoté et des résultats d’évaluation.</li>
+</ul>
+</li>
 </ul>
 <h2 id="10-annexes">10. Annexes</h2>
 <h3 id="commandes-utiles">Commandes utiles</h3>
@@ -1436,16 +1437,12 @@ vector_store/index.pkl
 <div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/rebuild_index.py
 </code></pre></div>
 
-<p>Lancement de l’API locale :</p>
-<div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>uvicorn<span class="w"> </span>echo_app.api.main:app<span class="w"> </span>--reload
+<p>Lancement de l’API locale avec Docker Compose :</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
 </code></pre></div>
 
 <p>Test fonctionnel de l’API locale déjà lancée :</p>
 <div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/api_test.py
-</code></pre></div>
-
-<p>Test manuel de la recherche sémantique :</p>
-<div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/06_test_semantic_search.py
 </code></pre></div>
 
 <p>Test manuel de la chaîne RAG complète :</p>
@@ -1456,20 +1453,60 @@ vector_store/index.pkl
 <div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-v
 </code></pre></div>
 
-<p>Qualité du code :</p>
-<div class="highlight"><pre><span></span><code>poetry<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>.
+<h3 id="exemple-de-test-api-local">Exemple de test API local</h3>
+<p>Après lancement avec Docker Compose, les endpoints peuvent être testés avec <code>curl</code>.</p>
+<p>Vérification de l’état de l’API :</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>http://127.0.0.1:8000/health
 </code></pre></div>
 
-<h3 id="exemple-de-recherche-semantique">Exemple de recherche sémantique</h3>
-<p>Exemple de requête :</p>
-<div class="highlight"><pre><span></span><code>astronomie
+<p>Réponse obtenue :</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;echo-rag-api&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;rag_service_ready&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
 </code></pre></div>
 
-<p>Résultat observé dans les premiers résultats :</p>
-<div class="highlight"><pre><span></span><code>Initiation à l&#39;astronomie à Lanton
+<p>Consultation des métadonnées techniques :</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>http://127.0.0.1:8000/metadata
 </code></pre></div>
 
-<p>Ce résultat montre que la recherche sémantique retrouve correctement un événement dont le contenu est proche de la requête utilisateur.</p>
+<p>Réponse obtenue :</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;echo-rag-api&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;rag_service_ready&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;vector_store_available&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;chunks_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">155</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;top_k_default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;last_rebuild_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-05-18T13:49:17Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;embedding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mistral-embed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generation_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mistral-small-latest&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Exemple de question envoyée au chatbot :</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8000/ask<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;question&quot;: &quot;Quels événements autour de l astronomie sont proposés ?&quot;}&#39;</span>
+</code></pre></div>
+
+<p>Extrait de réponse obtenue :</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Quels événements autour de l astronomie sont proposés ?&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;answer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;D&#39;après le contexte fourni, un seul événement autour de l&#39;astronomie est proposé : Initiation à l&#39;astronomie à Lanton...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;13708573&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie à Lanton&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lanton&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;start_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://openagenda.com/econature/events/initiation-a-lastronomie-a-lanton&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Cet exemple montre que l’API est disponible, que le vector store est chargé, et que la chaîne RAG retourne une réponse structurée avec sources.</p>
     </main>
   </div>
 </body>
