@@ -307,6 +307,11 @@ Le modèle par défaut est : `mistral-small-latest`.
 
 Il est configurable via la variable d’environnement `MISTRAL_MODEL`. L’appel est effectué via `client.chat.complete()` de la bibliothèque Python Mistral, dans la méthode `_generate_answer()` de `RagService`. Cette méthode est isolée pour faciliter les tests avec un faux client Mistral.
 
+> [!IMPORTANT]
+> **Résilience face aux erreurs Mistral**
+>
+> Mistral peut renvoyer ponctuellement un HTTP `429` avec le message `service_tier_capacity_exceeded` lorsque le modèle est temporairement saturé côté serveur. Pour absorber ces pics, `_generate_answer()` retente l’appel une seule fois après 2 secondes lorsque l’erreur correspond à ce cas, et laisse remonter toute autre exception sans retry. Cette stratégie est volontairement simple (pas de backoff exponentiel ni de bibliothèque externe) et reste facile à expliquer.
+
 ### Prompting
 
 Les prompts sont versionnés dans `echo_app/rag/prompts.py` :

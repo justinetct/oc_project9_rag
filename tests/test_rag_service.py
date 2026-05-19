@@ -8,6 +8,7 @@ l'instance ``RagService``).
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,6 +19,23 @@ from langchain_core.documents import Document  # noqa: E402
 
 from echo_app.rag import rag_service  # noqa: E402
 from echo_app.rag.rag_service import RagService  # noqa: E402
+
+
+def _make_chat_response(content: str) -> SimpleNamespace:
+    """Construit une réponse Mistral factice avec ``choices[0].message.content``."""
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+    )
+
+
+def _make_capacity_error() -> Exception:
+    """Construit une exception identique à celle observée en production."""
+    return RuntimeError(
+        "API error occurred: Status 429. Body: "
+        '{"object":"error","message":"Service tier capacity exceeded '
+        'for this model.","type":"service_tier_capacity_exceeded",'
+        '"code":"3505","raw_status_code":429}'
+    )
 
 
 class FakeRetriever:
@@ -234,3 +252,67 @@ def test_ask_default_does_not_expose_contexts(monkeypatch) -> None:
     response = service.ask("Quels événements d'astronomie ?")
 
     assert set(response.keys()) == {"question", "answer", "sources"}
+
+
+def test_generate_answer_retries_on_mistral_capacity_error(monkeypatch) -> None:
+    """Un 429 capacity au 1er appel doit déclencher un retry qui réussit."""
+    calls = {"count": 0}
+
+    def fake_complete(**kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise _make_capacity_error()
+        return _make_chat_response("Réponse après retry.")
+
+    fake_client = SimpleNamespace(chat=SimpleNamespace(complete=fake_complete))
+    monkeypatch.setattr(rag_service, "get_mistral_client", lambda: fake_client)
+    # On neutralise le sleep pour ne pas ralentir les tests.
+    monkeypatch.setattr(rag_service.time, "sleep", lambda _: None)
+
+    service = RagService()
+    answer = service._generate_answer([{"role": "user", "content": "hi"}])
+
+    assert answer == "Réponse après retry."
+    assert calls["count"] == 2
+
+
+def test_generate_answer_does_not_retry_on_other_error(monkeypatch) -> None:
+    """Une erreur qui n'est pas un 429 capacity doit remonter sans retry."""
+    calls = {"count": 0}
+    sleeps: list[float] = []
+
+    def fake_complete(**kwargs):
+        calls["count"] += 1
+        raise ValueError("Erreur de parsing JSON")
+
+    fake_client = SimpleNamespace(chat=SimpleNamespace(complete=fake_complete))
+    monkeypatch.setattr(rag_service, "get_mistral_client", lambda: fake_client)
+    monkeypatch.setattr(
+        rag_service.time, "sleep", lambda delay: sleeps.append(delay)
+    )
+
+    service = RagService()
+    with pytest.raises(ValueError, match="parsing JSON"):
+        service._generate_answer([{"role": "user", "content": "hi"}])
+
+    assert calls["count"] == 1
+    assert sleeps == []
+
+
+def test_generate_answer_raises_after_two_capacity_errors(monkeypatch) -> None:
+    """Deux 429 capacity successives → l'exception remonte après le retry."""
+    calls = {"count": 0}
+
+    def fake_complete(**kwargs):
+        calls["count"] += 1
+        raise _make_capacity_error()
+
+    fake_client = SimpleNamespace(chat=SimpleNamespace(complete=fake_complete))
+    monkeypatch.setattr(rag_service, "get_mistral_client", lambda: fake_client)
+    monkeypatch.setattr(rag_service.time, "sleep", lambda _: None)
+
+    service = RagService()
+    with pytest.raises(RuntimeError, match="service_tier_capacity_exceeded"):
+        service._generate_answer([{"role": "user", "content": "hi"}])
+
+    assert calls["count"] == 2

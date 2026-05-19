@@ -285,6 +285,7 @@ def ask(request: AskRequest) -> AskResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Erreur inattendue pendant POST /ask")
         raise HTTPException(
             status_code=500,
             detail="Erreur interne pendant la génération de la réponse.",

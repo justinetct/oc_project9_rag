@@ -21,6 +21,8 @@ assemblage en messages [system, user] passe par
 
 from __future__ import annotations
 
+import time
+
 from langchain_core.documents import Document
 
 from echo_app.config import MISTRAL_MODEL
@@ -37,6 +39,24 @@ CHUNK_SEPARATOR = "\n---\n"
 EMPTY_RESULT_ANSWER = (
     "Je n'ai trouvé aucun événement pertinent pour votre question."
 )
+MISTRAL_RETRY_DELAY_SECONDS = 2
+
+
+def _is_mistral_capacity_error(exc: BaseException) -> bool:
+    """Détecte un échec Mistral lié à la capacité du tier.
+
+    Mistral renvoie un HTTP 429 avec un message
+    ``service_tier_capacity_exceeded`` lorsque le modèle est temporairement
+    saturé côté serveur. On reconnaît aussi ``Status 429`` et
+    ``capacity exceeded`` pour rester tolérant aux variations de format
+    selon les versions du SDK.
+    """
+    message = str(exc).lower()
+    return (
+        "status 429" in message
+        or "service_tier_capacity_exceeded" in message
+        or "capacity exceeded" in message
+    )
 
 
 def _format_chunk_header(rank: int, metadata: dict) -> str:
@@ -173,8 +193,24 @@ class RagService:
         Le client Mistral est créé uniquement au moment de générer la
         réponse, ce qui permet d'instancier RagService dans les tests
         sans clé API.
+
+        Si Mistral renvoie un HTTP 429 ``service_tier_capacity_exceeded``
+        (le modèle est temporairement saturé côté serveur), on attend
+        ``MISTRAL_RETRY_DELAY_SECONDS`` secondes puis on retente une
+        seule fois. Toute autre exception remonte immédiatement pour
+        être loggée par l'API.
         """
         client = get_mistral_client()
+        try:
+            return self._call_chat_complete(client, messages)
+        except Exception as exc:
+            if not _is_mistral_capacity_error(exc):
+                raise
+            time.sleep(MISTRAL_RETRY_DELAY_SECONDS)
+            return self._call_chat_complete(client, messages)
+
+    def _call_chat_complete(self, client, messages: list[dict]) -> str:
+        """Exécute un appel unique à ``client.chat.complete()`` Mistral."""
         response = client.chat.complete(
             model=self.model,
             messages=messages,
