@@ -127,10 +127,14 @@ def extract_source_event_ids(response: dict) -> list[str]:
 
 def compute_event_recall(
     source_event_ids: list[str], expected_event_ids: list[str]
-) -> float:
-    """Rappel des event_ids attendus dans les sources (1.0 si hors-sujet et aucune source)."""
+) -> float | None:
+    """Rappel des event_ids attendus dans les sources.
+
+    None si aucun événement n'est attendu, car le rappel n'est pas applicable.
+    """
     if not expected_event_ids:
-        return 1.0 if not source_event_ids else 0.0
+        return None
+
     found = sum(1 for eid in expected_event_ids if eid in source_event_ids)
     return round(found / len(expected_event_ids), 3)
 
@@ -206,7 +210,7 @@ def evaluate_row(row: dict, rag_service: RagService) -> dict:
 
 
 def summarize_results(results: list[dict]) -> dict:
-    """Agrège les résultats maison : compteurs par status + moyennes (rétro-compat tests)."""
+    """Agrège les résultats maison : compteurs par status + moyennes."""
     total = len(results)
     counts = {"ok": 0, "partial": 0, "ko": 0}
     for result in results:
@@ -221,19 +225,31 @@ def summarize_results(results: list[dict]) -> dict:
             "partial": 0,
             "ko": 0,
             "average_keyword_match_rate": 0.0,
-            "average_event_recall": 0.0,
+            "average_event_recall": None,
         }
 
-    avg_kw = sum(r.get("keyword_match_rate", 0.0) for r in results) / total
-    avg_ev = sum(r.get("event_recall", 0.0) for r in results) / total
+    keyword_values = [
+        r.get("keyword_match_rate")
+        for r in results
+        if not _is_missing(r.get("keyword_match_rate"))
+    ]
+    event_values = [
+        r.get("event_recall")
+        for r in results
+        if not _is_missing(r.get("event_recall"))
+    ]
 
     return {
         "total": total,
         "ok": counts["ok"],
         "partial": counts["partial"],
         "ko": counts["ko"],
-        "average_keyword_match_rate": round(avg_kw, 3),
-        "average_event_recall": round(avg_ev, 3),
+        "average_keyword_match_rate": round(sum(keyword_values) / len(keyword_values), 3)
+        if keyword_values
+        else None,
+        "average_event_recall": round(sum(event_values) / len(event_values), 3)
+        if event_values
+        else None,
     }
 
 

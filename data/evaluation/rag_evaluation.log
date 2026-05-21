@@ -47,7 +47,7 @@ Evaluating: 60/60 jobs terminés en 34:06 (~34.1 s/job en moyenne, exécution s�
   OK / Partial / KO  : 14 / 1 / 0
   Métriques maison :
     keyword_match_rate moyen : 0.83
-    event_recall moyen       : 0.811
+    event_recall moyen       : 0.869
   Métriques Ragas :
     faithfulness moyen       : 0.927
     answer_relevancy moyen   : 0.828
