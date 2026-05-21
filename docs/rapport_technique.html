@@ -664,7 +664,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
         <p class="lead">Système RAG construit autour d'OpenAgenda pour proposer des événements culturels du Bassin d'Arcachon.</p>
       </section>
 
-      <h1 id="rapport-technique-écho-assistant-intelligent-de-recommandation-dévénements-culturels">Rapport technique - Écho, assistant intelligent de recommandation d’événements culturels</h1>
+      <h1 id="rapport-technique-écho-assistant-rag-de-recommandation-dévénements-culturels">Rapport technique — Écho, assistant RAG de recommandation d’événements culturels</h1>
 
 <h2 id="1-objectifs-du-projet">1. Objectifs du projet</h2>
 <h3 id="contexte">Contexte</h3>
@@ -799,7 +799,7 @@ Quels événements autour de l&#39;astronomie sont proposés ?
 
 <p>Le modèle de génération utilisé est <code class="badge-tech">mistral-small-latest</code>, configurable via la variable d’environnement <code>MISTRAL_MODEL</code>. Le client Mistral est créé uniquement au moment de générer une réponse, ce qui permet d’instancier <code>RagService</code> sans clé API en environnement de test.</p>
 <h3 id="exposition-via-api">Exposition via API</h3>
-<p>L’API FastAPI est implémentée dans <a href="../echo_app/api/"><code>echo_app/api/</code></a>. Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question au chatbot et reconstruction locale de l’index.</p>
+<p>L’API FastAPI est implémentée dans <a href="../echo_app/api/"><code>echo_app/api/</code></a>. Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question à Écho et reconstruction locale de l’index.</p>
 <p>La logique RAG reste isolée dans <code>echo_app/rag/rag_service.py</code> : l’API ne fait que valider les requêtes, appeler le service métier et formater les réponses. Les endpoints, les formats de requête/réponse et les choix de gestion d’erreur sont détaillés dans la section <a href="#6-api-et-endpoints-exposés">6. API et endpoints exposés</a>.</p>
 <h3 id="technologies-utilisées">Technologies utilisées</h3>
 <p>Les principales technologies utilisées sont :</p>
@@ -926,7 +926,7 @@ MIN_CHUNK_SIZE = 200
 <h3 id="prompting">Prompting</h3>
 <p>Les prompts sont versionnés dans <code>echo_app/rag/prompts.py</code> :</p>
 <ul>
-<li><code>RAG_SYSTEM_PROMPT</code> contient les règles générales du chatbot (voir <a href="#prompt-système-utilisé">Prompt système utilisé</a> en annexe) ;</li>
+<li><code>RAG_SYSTEM_PROMPT</code> contient les règles générales de Écho (voir <a href="#prompt-système-utilisé">Prompt système utilisé</a> en annexe) ;</li>
 <li><code>build_user_prompt()</code> construit le message utilisateur à partir du contexte retrouvé et de la question.</li>
 </ul>
 <p>Cette séparation permet de faire évoluer le cadrage métier sans modifier directement le service RAG.</p>
@@ -1123,7 +1123,7 @@ MIN_CHUNK_SIZE = 200
 <li><strong>Métriques maison complémentaires</strong> : signaux d’analyse lisibles à la main, sans dépendre du LLM juge.</li>
 </ul>
 <h3 id="jeu-de-test-annoté">Jeu de test annoté</h3>
-<p>Le jeu de questions/réponses annoté est stocké dans <a href="../data/evaluation/qa_annotated.csv"><code>data/evaluation/qa_annotated.csv</code></a>. Il contient 15 questions couvrant plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.</p>
+<p>Le jeu de questions/réponses annoté est stocké dans <a href="../data/evaluation/qa_annotated.csv"><code>data/evaluation/qa_annotated.csv</code></a>. Il contient 15 questions couvrant plusieurs intentions de Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.</p>
 <div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Le jeu contient aussi un cas hors sujet lié à une demande de restaurant, afin de vérifier que le système ne force pas une réponse quand le contexte ne le permet pas.</p></div></div>
 <p>Chaque ligne du CSV contient cinq colonnes :</p>
 <ul>
@@ -1492,7 +1492,7 @@ MIN_CHUNK_SIZE = 200
 <span class="p">}</span>
 </code></pre></div>
 
-<p>Exemple de question envoyée au chatbot :</p>
+<p>Exemple de question envoyée à Écho :</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8000/ask<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;question&quot;: &quot;Quels événements autour de l astronomie sont proposés ?&quot;}&#39;</span>
@@ -1516,7 +1516,7 @@ MIN_CHUNK_SIZE = 200
 
 <p>Cet exemple montre que l’API est disponible, que le vector store est chargé, et que la chaîne RAG retourne une réponse structurée avec sources.</p>
 <h3 id="prompt-système-utilisé">Prompt système utilisé</h3>
-<p>Le prompt système est versionné dans <code>echo_app/rag/prompts.py</code>. Il définit le rôle d’Écho et les règles de réponse du chatbot.</p>
+<p>Le prompt système est versionné dans <code>echo_app/rag/prompts.py</code>. Il définit le rôle d’Écho et les règles de réponse de Écho.</p>
 <div class="highlight"><pre><span></span><code>Tu es Écho, un assistant culturel spécialisé dans les événements autour du
 Bassin d&#39;Arcachon. Tu aides les utilisateurs à découvrir des événements à
 partir d&#39;une base d&#39;événements indexés.

@@ -1,7 +1,14 @@
-# Écho - Chatbot culturel
-*POC d'un chatbot RAG sur les événements culturels du Bassin d'Arcachon.*
+# Écho — Assistant RAG de recommandation culturelle
 
-> Écho est le chatbot culturel développé par Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
+*POC d’assistant RAG pour interroger des événements culturels du Bassin d’Arcachon et du Val de l’Eyre.*
+
+<img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+<img alt="LangChain" src="https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white">
+<img alt="Mistral AI" src="https://img.shields.io/badge/Mistral_AI-FA520F?logo=mistralai&logoColor=white">
+<img alt="FAISS" src="https://img.shields.io/badge/FAISS-0866FF?logo=meta&logoColor=white">
+<img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white">
+
+> Écho est l’assistant RAG développé pour Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
 📄 **[Rapport technique HTML](https://justinetct.github.io/oc_project9_rag/rapport_technique.html)**
 
@@ -9,8 +16,7 @@
 
 Concevoir un système RAG capable de répondre à des questions à partir d’événements collectés via OpenAgenda.
 
-Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents sont ensuite découpés, transformés en embeddings, indexés avec FAISS via LangChain et utilisés par le chatbot Écho pour générer des réponses contextualisées.
-
+Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis pré-traitées sous forme de documents Markdown indexables. Ces documents sont ensuite découpés, transformés en embeddings, indexés avec FAISS via LangChain et utilisés par Écho pour générer des réponses contextualisées.
 
 ## Sommaire
 
@@ -30,7 +36,7 @@ Les données sont récupérées depuis l’API Opendatasoft / OpenAgenda, puis p
 
 ## Stack technique
 
-L'application s'appuiera notamment sur :
+L’application s’appuie notamment sur :
 
 - Python 3.12
 - Poetry pour la gestion de l'environnement
@@ -110,7 +116,7 @@ oc_project9_rag/
 └── vector_store/                      # Index FAISS généré localement
 ```
 
-Les dossiers `data/` et `vector_store/` contiennent des fichiers générés ou volumineux qui ne doivent pas être versionnés. Les fichiers `.gitkeep` permettent simplement de conserver l'arborescence vide dans Git.
+Le dépôt versionne les fichiers nécessaires au lancement local du POC, notamment `data/processed/events_documents.jsonl`. Les autres fichiers générés ou volumineux de `data/` et `vector_store/` ne sont pas versionnés ; les scripts permettent de les régénérer si besoin.
 
 ## Installation
 
@@ -209,7 +215,7 @@ tests/
 ├── test_langchain_faiss_store.py # Vector store FAISS LangChain : build, save, load, retriever
 ├── test_preprocessing.py         # Filtrage, nettoyage et normalisation des événements
 ├── test_rag_evaluation.py        # Fonctions de scoring, agrégation et intégration Ragas de l'évaluation RAG
-├── test_rag_prompts.py           # Prompts métier du chatbot Écho
+├── test_rag_prompts.py           # Prompts métier de l’assistant Écho
 ├── test_rag_service.py           # Service RAG avec retrieval et génération mockés
 ├── test_rebuild_index.py         # Reconstruction du vector store FAISS LangChain
 └── test_search.py                # Recherche sémantique via FAISS LangChain
@@ -224,7 +230,7 @@ Les tests couvrent :
 - le chunking des documents avant indexation ;
 - la génération d'embeddings Mistral avec des tests mockés, sans appel réseau ;
 - l'adaptateur d'embeddings LangChain et le vector store FAISS LangChain ;
-- les prompts métier du chatbot Écho ;
+- les prompts métier de l’assistant Écho ;
 - l'assemblage des messages LangChain sans appel réseau ;
 - la chaîne RAG avec recherche, filtrage des sources par écart de distance L2, construction du contexte, génération mockée et retry sur erreur de capacité Mistral (HTTP 429) ;
 - la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`) ;
@@ -262,6 +268,8 @@ Le fichier `events_documents.jsonl` contient un document par ligne, avec :
 
 - `document_text` : texte Markdown lisible et indexable ;
 - `metadata` : informations structurées conservées séparément, comme l’URL source, la ville, les dates, l’image et les coordonnées.
+
+Le fichier `data/processed/events_documents.jsonl` est versionné pour permettre la reconstruction de l’index sur un nouvel environnement sans relancer toute la collecte OpenAgenda. Pour reconstruire entièrement les données depuis zéro, lancer les scripts `01` à `04`, puis `scripts/rebuild_index.py`.
 
 ## Préparation des documents pour l'indexation
 
@@ -377,10 +385,10 @@ Swagger est disponible sur : <http://127.0.0.1:8000/docs>.
 
 - `GET /health` → état minimal de l'API (rapide, aucune I/O)
 - `GET /metadata` → informations techniques sur le service RAG et le vector store (sans secret)
-- `POST /ask` → question/réponse RAG sourcée
+- `POST /ask` → question/réponse RAG avec sources
 - `POST /rebuild` → reconstruction locale de l'index avec confirmation
 
-Exemples  :
+Exemples :
 
 ```bash
 curl http://127.0.0.1:8000/health

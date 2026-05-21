@@ -1,4 +1,4 @@
-# Rapport technique - Écho, assistant intelligent de recommandation d’événements culturels
+# Rapport technique — Écho, assistant RAG de recommandation d’événements culturels
 
 ## Sommaire
 
@@ -152,7 +152,7 @@ Le modèle de génération utilisé est `mistral-small-latest`, configurable via
 
 ### Exposition via API
 
-L’API FastAPI est implémentée dans [`echo_app/api/`](../echo_app/api/). Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question au chatbot et reconstruction locale de l’index.
+L’API FastAPI est implémentée dans [`echo_app/api/`](../echo_app/api/). Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question à Écho et reconstruction locale de l’index.
 
 La logique RAG reste isolée dans `echo_app/rag/rag_service.py` : l’API ne fait que valider les requêtes, appeler le service métier et formater les réponses. Les endpoints, les formats de requête/réponse et les choix de gestion d’erreur sont détaillés dans la section [6. API et endpoints exposés](#6-api-et-endpoints-exposés).
 
@@ -326,7 +326,7 @@ Il est configurable via la variable d’environnement `MISTRAL_MODEL`. L’appel
 
 Les prompts sont versionnés dans `echo_app/rag/prompts.py` :
 
-- `RAG_SYSTEM_PROMPT` contient les règles générales du chatbot (voir [Prompt système utilisé](#prompt-système-utilisé) en annexe) ;
+- `RAG_SYSTEM_PROMPT` contient les règles générales de Écho (voir [Prompt système utilisé](#prompt-système-utilisé) en annexe) ;
 - `build_user_prompt()` construit le message utilisateur à partir du contexte retrouvé et de la question.
 
 Cette séparation permet de faire évoluer le cadrage métier sans modifier directement le service RAG.
@@ -527,7 +527,7 @@ L’évaluation automatique est implémentée via `scripts/08_evaluate_rag.py`. 
 
 ### Jeu de test annoté
 
-Le jeu de questions/réponses annoté est stocké dans [`data/evaluation/qa_annotated.csv`](../data/evaluation/qa_annotated.csv). Il contient 15 questions couvrant plusieurs intentions du chatbot Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.
+Le jeu de questions/réponses annoté est stocké dans [`data/evaluation/qa_annotated.csv`](../data/evaluation/qa_annotated.csv). Il contient 15 questions couvrant plusieurs intentions de Écho : astronomie, exposition, nature, vélo, famille, commune, spectacle, patrimoine, santé, retraite, emploi et mobilité.
 
 > [!NOTE]
 > Le jeu contient aussi un cas hors sujet lié à une demande de restaurant, afin de vérifier que le système ne force pas une réponse quand le contexte ne le permet pas.
@@ -848,7 +848,7 @@ Réponse obtenue :
 }
 ```
 
-Exemple de question envoyée au chatbot :
+Exemple de question envoyée à Écho :
 
 ```bash
 curl -X POST http://127.0.0.1:8000/ask \
@@ -878,7 +878,7 @@ Cet exemple montre que l’API est disponible, que le vector store est chargé, 
 
 ### Prompt système utilisé
 
-Le prompt système est versionné dans `echo_app/rag/prompts.py`. Il définit le rôle d’Écho et les règles de réponse du chatbot.
+Le prompt système est versionné dans `echo_app/rag/prompts.py`. Il définit le rôle d’Écho et les règles de réponse de Écho.
 
 ```text
 Tu es Écho, un assistant culturel spécialisé dans les événements autour du
