@@ -1,5 +1,7 @@
 # Rapport technique — Écho, assistant RAG de recommandation d’événements culturels
 
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white) ![Mistral AI](https://img.shields.io/badge/Mistral_AI-FA520F?logo=mistralai&logoColor=white) ![FAISS](https://img.shields.io/badge/FAISS-0866FF?logo=meta&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+
 ## Sommaire
 
 1. [Objectifs du projet](#1-objectifs-du-projet)
@@ -60,7 +62,7 @@ Les objectifs principaux sont :
 
 Le périmètre du POC est volontairement limité afin de rester simple et maîtrisable.
 
-Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.
+Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement. Le fichier de documents RAG est versionné pour faciliter la reconstruction locale de l’index, tandis que l’index FAISS reste généré localement.
 
 Le POC implémente et teste l’ensemble de la chaîne RAG : préparation des données, chunking, embeddings Mistral, index FAISS LangChain, recherche sémantique, génération Mistral, API FastAPI et évaluation automatique sur un jeu annoté.
 
@@ -723,7 +725,7 @@ L’organisation du dépôt est la suivante :
 
 ```text
 oc_project9_rag/
-├── data/                  # Données brutes et transformées, non versionnées
+├── data/                  # Données brutes et transformées, dont documents RAG versionnés
 ├── docs/                  # Documentation projet et rapport technique
 ├── Dockerfile             # Image Docker de l’API
 ├── docker-compose.yml     # Lancement local de l’API avec Docker Compose
@@ -878,7 +880,7 @@ Cet exemple montre que l’API est disponible, que le vector store est chargé, 
 
 ### Prompt système utilisé
 
-Le prompt système est versionné dans `echo_app/rag/prompts.py`. Il définit le rôle d’Écho et les règles de réponse de Écho.
+Le prompt système est versionné dans `echo_app/rag/prompts.py`. Il définit le rôle d’Écho et les règles de réponse de l’assistant.
 
 ```text
 Tu es Écho, un assistant culturel spécialisé dans les événements autour du

@@ -60,7 +60,7 @@
   }
   .topbar .sub {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     margin-left: 4px;
   }
   .topbar .spacer { flex: 1; }
@@ -702,7 +702,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </ul>
 <h3 id="périmètre">Périmètre</h3>
 <p>Le périmètre du POC est volontairement limité afin de rester simple et maîtrisable.</p>
-<p>Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement, puis sauvegardées dans le dépôt sous forme de fichiers générés non versionnés.</p>
+<p>Le corpus utilisé est composé d’événements OpenAgenda autour du Bassin d’Arcachon. Les données sont préparées localement. Le fichier de documents RAG est versionné pour faciliter la reconstruction locale de l’index, tandis que l’index FAISS reste généré localement.</p>
 <p>Le POC implémente et teste l’ensemble de la chaîne RAG : préparation des données, chunking, embeddings Mistral, index FAISS LangChain, recherche sémantique, génération Mistral, API FastAPI et évaluation automatique sur un jeu annoté.</p>
 <h2 id="2-architecture-du-système">2. Architecture du système</h2>
 <h3 id="diagramme-uml-de-composants">Diagramme UML de composants</h3>
@@ -1377,7 +1377,7 @@ MIN_CHUNK_SIZE = 200
 <h2 id="9-organisation-du-dépôt-github">9. Organisation du dépôt GitHub</h2>
 <p>L’organisation du dépôt est la suivante :</p>
 <div class="highlight"><pre><span></span><code>oc_project9_rag/
-├── data/                  # Données brutes et transformées, non versionnées
+├── data/                  # Données brutes et transformées, dont documents RAG versionnés
 ├── docs/                  # Documentation projet et rapport technique
 ├── Dockerfile             # Image Docker de l’API
 ├── docker-compose.yml     # Lancement local de l’API avec Docker Compose
@@ -1516,7 +1516,7 @@ MIN_CHUNK_SIZE = 200
 
 <p>Cet exemple montre que l’API est disponible, que le vector store est chargé, et que la chaîne RAG retourne une réponse structurée avec sources.</p>
 <h3 id="prompt-système-utilisé">Prompt système utilisé</h3>
-<p>Le prompt système est versionné dans <code>echo_app/rag/prompts.py</code>. Il définit le rôle d’Écho et les règles de réponse de Écho.</p>
+<p>Le prompt système est versionné dans <code>echo_app/rag/prompts.py</code>. Il définit le rôle d’Écho et les règles de réponse de l’assistant.</p>
 <div class="highlight"><pre><span></span><code>Tu es Écho, un assistant culturel spécialisé dans les événements autour du
 Bassin d&#39;Arcachon. Tu aides les utilisateurs à découvrir des événements à
 partir d&#39;une base d&#39;événements indexés.
