@@ -2,11 +2,7 @@
 
 *POC d’assistant RAG pour interroger des événements culturels du Bassin d’Arcachon et du Val de l’Eyre.*
 
-<img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
-<img alt="LangChain" src="https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white">
-<img alt="Mistral AI" src="https://img.shields.io/badge/Mistral_AI-FA520F?logo=mistralai&logoColor=white">
-<img alt="FAISS" src="https://img.shields.io/badge/FAISS-0866FF?logo=meta&logoColor=white">
-<img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white">
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white) ![Mistral AI](https://img.shields.io/badge/Mistral_AI-FA520F?logo=mistralai&logoColor=white) ![FAISS](https://img.shields.io/badge/FAISS-0866FF?logo=meta&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 
 > Écho est l’assistant RAG développé pour Puls-Events. Il permet d’interroger une base d’événements OpenAgenda à l’aide d’un système RAG combinant recherche vectorielle FAISS et génération de réponse par Mistral.
 
