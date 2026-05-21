@@ -389,7 +389,7 @@ Le vector store LangChain s’appuie sur un index FAISS `IndexFlatL2`. Ce choix 
 Dans le corpus utilisé, le pipeline produit `138` documents OpenAgenda, découpés en `155` chunks. Chaque chunk reçoit un embedding, ce qui donne `155` vecteurs dans FAISS.
 
 > [!NOTE]
-> Le nombre de vecteurs est supérieur au nombre de documents, car certains événements longs sont découpés en plusieurs chunks.
+> Un filtrage par écart de distance L2 a été ajouté pour éviter d’envoyer au modèle des sources nettement moins proches que le meilleur résultat. Le seuil reste empirique et devra être validé sur un jeu plus large.
 
 ### Persistance de l’index
 
@@ -486,15 +486,15 @@ Exemple de réponse :
 
 ```json
 {
-  "question": "Quels événements autour de l’astronomie sont disponibles ?",
-  "answer": "...",
+  "question": "Quels événements autour de l astronomie sont proposés ?",
+  "answer": "D'après le contexte fourni, un seul événement autour de l'astronomie est proposé :\n\n**Initiation à l'astronomie à Lanton** (Lanton)\nUne soirée d'observation du ciel nocturne avec initiation aux instruments et découverte des constellations, le **5 janvier 2026 à 19h30** à Blagon (Lanton). Tarifs : 10€ pour les enfants, 20€ pour les adultes. Réservation via EcoNature.",
   "sources": [
     {
       "event_id": "13708573",
       "title": "Initiation à l'astronomie à Lanton",
       "city": "Lanton",
       "start_date": "2026-01-05T19:30:00+00:00",
-      "url": "https://openagenda.com/..."
+      "url": "https://openagenda.com/econature/events/initiation-a-lastronomie-a-lanton"
     }
   ]
 }
@@ -605,18 +605,18 @@ L’évaluation lancée sur les 15 questions annotées avec le pipeline final do
 | `ok` | 14 |
 | `partial` | 1 |
 | `ko` | 0 |
-| `keyword_match_rate` moyen | 0.830 |
+| `keyword_match_rate` moyen | 0.793 |
 | `event_recall` moyen | 0.869 |
-| `faithfulness` moyen | 0.927 |
+| `faithfulness` moyen | 0.846 |
 | `answer_relevancy` moyen | 0.828 |
-| `context_precision` moyen | 0.942 |
-| `context_recall` moyen | 0.867 |
+| `context_precision` moyen | 0.957 |
+| `context_recall` moyen | 0.900 |
 
 Les 4 métriques Ragas sont calculées pour les 15 questions, sans valeur manquante. Elles montrent une chaîne RAG globalement fiable :
 
-- `faithfulness` ≈ 0.927 : très peu d’invention, les réponses restent fidèles aux chunks récupérés ;
-- `context_precision` ≈ 0.942 : les chunks pertinents sont systématiquement bien placés en tête du retrieval ;
-- `context_recall` ≈ 0.867 : la couverture du retrieval est solide vis-à-vis des réponses attendues ;
+- `faithfulness` ≈ 0.846 : les réponses restent globalement fidèles aux chunks récupérés, avec peu d’invention ;
+- `context_precision` ≈ 0.957 : les chunks pertinents sont systématiquement bien placés en tête du retrieval ;
+- `context_recall` ≈ 0.900 : la couverture du retrieval est solide vis-à-vis des réponses attendues ;
 - `answer_relevancy` ≈ 0.828 : les réponses générées répondent bien aux questions, à l’exception du cas hors sujet (voir ci-dessous).
 
 
@@ -628,12 +628,13 @@ Une seule question est classée `partial` :
   - `keyword_match_rate = 0.333`, 
   - `event_recall` non applicable (aucun événement attendu pour ce cas hors sujet).
 - **Métriques Ragas** : 
-  - `faithfulness = 0.667`,
+  - `faithfulness = 0.000`,
   - `context_precision = 0.806`, 
   - `context_recall = 1.0`, 
   - `answer_relevancy = 0.0`.
 - **Interprétation** : 
   - Le score `answer_relevancy` à `0.0` est cohérent : Ragas détecte que la réponse, qui est un refus prudent, n’est pas alignée avec la demande de restaurant. 
+  - Le `faithfulness` à `0.000` reflète le même phénomène : un refus prudent ne reprend aucun chunk du contexte, Ragas ne trouve donc aucune affirmation à rattacher aux sources. 
   - Le `status` maison reste `partial` parce que des sources sont remontées. 
   - La détection automatique du hors sujet côté chaîne RAG reste donc perfectible.
 

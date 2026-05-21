@@ -4,7 +4,10 @@ Ce module orchestre la chaîne RAG :
 
 - récupération des chunks d'événements pertinents via le retriever
   LangChain obtenu avec ``vectorstore.as_retriever()`` ;
-- construction d'un contexte numéroté à partir des Documents retrouvés ;
+- filtrage des chunks par écart de distance L2 entre sources
+  (``filter_documents_by_l2_gap``) : on écarte les sources nettement
+  plus lointaines que la meilleure ;
+- construction d'un contexte numéroté à partir des Documents retenus ;
 - construction des messages du prompt via ``ChatPromptTemplate`` ;
 - appel au modèle Mistral pour générer la réponse ;
 - extraction des sources affichables, dédoublonnées par event_id.
@@ -35,6 +38,9 @@ from src.config import SEED
 
 DEFAULT_TOP_K = 5
 DEFAULT_TEMPERATURE = 0.2
+# Au-delà de cet écart de distance L2 entre deux sources consécutives,
+# la source la plus lointaine (et les suivantes) est écartée du contexte.
+L2_GAP_THRESHOLD = 0.10
 CHUNK_SEPARATOR = "\n---\n"
 EMPTY_RESULT_ANSWER = (
     "Je n'ai trouvé aucun événement pertinent pour votre question."
@@ -111,6 +117,59 @@ def extract_sources(documents: list[Document]) -> list[dict]:
     return sources
 
 
+def filter_documents_by_l2_gap(
+    documents: list[Document],
+    scored: list[tuple[Document, float]],
+    threshold: float = L2_GAP_THRESHOLD,
+) -> list[Document]:
+    """Filtre les chunks récupérés selon l'écart de distance L2 entre sources.
+
+    ``documents`` est la liste de chunks renvoyée par le retriever LangChain.
+    ``scored`` est la liste ``(Document, distance L2)`` issue de
+    ``similarity_search_with_score`` pour la même question : le retriever
+    n'exposant pas les distances, cette seconde requête sert uniquement à
+    les récupérer. Les chunks sont dédoublonnés en « sources » (1er chunk
+    par event_id) ; au premier écart de distance L2 supérieur à
+    ``threshold``, cette source et les suivantes sont écartées. On renvoie
+    les chunks de ``documents`` appartenant aux sources gardées, dans
+    l'ordre d'origine.
+    """
+    if not documents:
+        return []
+
+    # Distance L2 par event_id (1re occurrence dans le résultat scoré).
+    distance_by_event: dict[str, float] = {}
+    for document, distance in scored:
+        event_id = str((document.metadata or {}).get("event_id"))
+        if event_id not in distance_by_event:
+            distance_by_event[event_id] = distance
+
+    # Sources = 1er chunk par event_id, dans l'ordre du retriever.
+    source_event_ids: list[str] = []
+    seen_event_ids: set[str] = set()
+    for document in documents:
+        event_id = str((document.metadata or {}).get("event_id"))
+        if event_id not in seen_event_ids:
+            seen_event_ids.add(event_id)
+            source_event_ids.append(event_id)
+
+    # On garde la source la plus proche, puis on s'arrête au 1er écart trop grand.
+    kept_event_ids = {source_event_ids[0]}
+    previous_distance = distance_by_event.get(source_event_ids[0], 0.0)
+    for event_id in source_event_ids[1:]:
+        distance = distance_by_event.get(event_id)
+        if distance is None or distance - previous_distance > threshold:
+            break
+        kept_event_ids.add(event_id)
+        previous_distance = distance
+
+    return [
+        document
+        for document in documents
+        if str((document.metadata or {}).get("event_id")) in kept_event_ids
+    ]
+
+
 class RagService:
     """Orchestre la chaîne retriever LangChain + génération Mistral."""
 
@@ -151,13 +210,15 @@ class RagService:
     def ask(self, question: str, *, include_contexts: bool = False) -> dict:
         """Répond à une question utilisateur via la chaîne RAG complète.
 
+        Récupère les chunks via FAISS, applique le filtre d'écart L2
+        (``filter_documents_by_l2_gap``), génère la réponse avec Mistral
+        et renvoie ``{question, answer, sources}``.
+
         Le paramètre ``include_contexts`` est réservé à l'évaluation
         (script ``08_evaluate_rag.py``) : quand il vaut ``True``, le dict
         retourné contient en plus une clé ``contexts`` listant le
-        ``page_content`` brut de chaque chunk retrouvé, sous la forme
-        attendue par Ragas. Par défaut (``False``), le comportement et le
-        schéma de retour sont strictement identiques à la version
-        précédente : l'API ``POST /ask`` n'est pas affectée.
+        ``page_content`` des chunks retenus, sous la forme attendue par
+        Ragas.
         """
         if not question or not str(question).strip():
             raise ValueError("La question est vide.")
@@ -173,6 +234,13 @@ class RagService:
             if include_contexts:
                 result["contexts"] = []
             return result
+
+        # Le retriever LangChain n'expose pas les distances : on relance la
+        # même recherche FAISS avec les scores, uniquement pour le filtre.
+        scored = self.retriever.vectorstore.similarity_search_with_score(
+            question, k=self.top_k
+        )
+        documents = filter_documents_by_l2_gap(documents, scored)
 
         context = build_context(documents)
         messages = build_langchain_messages(question=question, context=context)

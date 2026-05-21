@@ -3,10 +3,10 @@
   "ok": 14,
   "partial": 1,
   "ko": 0,
-  "average_keyword_match_rate": 0.83,
+  "average_keyword_match_rate": 0.793,
   "average_event_recall": 0.869,
-  "average_faithfulness": 0.927,
+  "average_faithfulness": 0.846,
   "average_answer_relevancy": 0.828,
-  "average_context_precision": 0.942,
-  "average_context_recall": 0.867
+  "average_context_precision": 0.957,
+  "average_context_recall": 0.9
 }

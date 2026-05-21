@@ -996,7 +996,7 @@ MIN_CHUNK_SIZE = 200
 <p>Le vector store LangChain s’appuie sur un index FAISS <code class="badge-tech">IndexFlatL2</code>. Ce choix est adapté au POC car le volume de données est faible, l’index est simple à construire et la recherche reste exacte.</p>
 <p><code class="badge-tech">IndexFlatL2</code> compare les vecteurs avec une distance L2 : plus la distance est faible, plus le chunk est proche de la question utilisateur.</p>
 <p>Dans le corpus utilisé, le pipeline produit <code>138</code> documents OpenAgenda, découpés en <code>155</code> chunks. Chaque chunk reçoit un embedding, ce qui donne <code>155</code> vecteurs dans FAISS.</p>
-<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Le nombre de vecteurs est supérieur au nombre de documents, car certains événements longs sont découpés en plusieurs chunks.</p></div></div>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Un filtrage par écart de distance L2 a été ajouté pour éviter d’envoyer au modèle des sources nettement moins proches que le meilleur résultat. Le seuil reste empirique et devra être validé sur un jeu plus large.</p></div></div>
 <h3 id="persistance-de-lindex">Persistance de l’index</h3>
 <p>Le vector store est sauvegardé localement dans le dossier <code>vector_store/</code> avec le format LangChain :</p>
 <table>
@@ -1089,15 +1089,15 @@ MIN_CHUNK_SIZE = 200
 
 <p>Exemple de réponse :</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Quels événements autour de l’astronomie sont disponibles ?&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;answer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Quels événements autour de l astronomie sont proposés ?&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;answer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;D&#39;après le contexte fourni, un seul événement autour de l&#39;astronomie est proposé :\n\n**Initiation à l&#39;astronomie à Lanton** (Lanton)\nUne soirée d&#39;observation du ciel nocturne avec initiation aux instruments et découverte des constellations, le **5 janvier 2026 à 19h30** à Blagon (Lanton). Tarifs : 10€ pour les enfants, 20€ pour les adultes. Réservation via EcoNature.&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;13708573&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie à Lanton&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lanton&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;start_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://openagenda.com/...&quot;</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://openagenda.com/econature/events/initiation-a-lastronomie-a-lanton&quot;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -1256,7 +1256,7 @@ MIN_CHUNK_SIZE = 200
 </tr>
 <tr>
 <td><code>keyword_match_rate</code> moyen</td>
-<td style="text-align: right;">0.830</td>
+<td style="text-align: right;">0.793</td>
 </tr>
 <tr>
 <td><code>event_recall</code> moyen</td>
@@ -1264,7 +1264,7 @@ MIN_CHUNK_SIZE = 200
 </tr>
 <tr>
 <td><code>faithfulness</code> moyen</td>
-<td style="text-align: right;">0.927</td>
+<td style="text-align: right;">0.846</td>
 </tr>
 <tr>
 <td><code>answer_relevancy</code> moyen</td>
@@ -1272,19 +1272,19 @@ MIN_CHUNK_SIZE = 200
 </tr>
 <tr>
 <td><code>context_precision</code> moyen</td>
-<td style="text-align: right;">0.942</td>
+<td style="text-align: right;">0.957</td>
 </tr>
 <tr>
 <td><code>context_recall</code> moyen</td>
-<td style="text-align: right;">0.867</td>
+<td style="text-align: right;">0.900</td>
 </tr>
 </tbody>
 </table>
 <p>Les 4 métriques Ragas sont calculées pour les 15 questions, sans valeur manquante. Elles montrent une chaîne RAG globalement fiable :</p>
 <ul>
-<li><code>faithfulness</code> ≈ 0.927 : très peu d’invention, les réponses restent fidèles aux chunks récupérés ;</li>
-<li><code>context_precision</code> ≈ 0.942 : les chunks pertinents sont systématiquement bien placés en tête du retrieval ;</li>
-<li><code>context_recall</code> ≈ 0.867 : la couverture du retrieval est solide vis-à-vis des réponses attendues ;</li>
+<li><code>faithfulness</code> ≈ 0.846 : les réponses restent globalement fidèles aux chunks récupérés, avec peu d’invention ;</li>
+<li><code>context_precision</code> ≈ 0.957 : les chunks pertinents sont systématiquement bien placés en tête du retrieval ;</li>
+<li><code>context_recall</code> ≈ 0.900 : la couverture du retrieval est solide vis-à-vis des réponses attendues ;</li>
 <li><code>answer_relevancy</code> ≈ 0.828 : les réponses générées répondent bien aux questions, à l’exception du cas hors sujet (voir ci-dessous).</li>
 </ul>
 <p>Une seule question est classée <code>partial</code> :</p>
@@ -1297,7 +1297,7 @@ MIN_CHUNK_SIZE = 200
 </ul>
 </li>
 <li><strong>Métriques Ragas</strong> : <ul>
-<li><code>faithfulness = 0.667</code>,</li>
+<li><code>faithfulness = 0.000</code>,</li>
 <li><code>context_precision = 0.806</code>, </li>
 <li><code>context_recall = 1.0</code>, </li>
 <li><code>answer_relevancy = 0.0</code>.</li>
@@ -1305,6 +1305,7 @@ MIN_CHUNK_SIZE = 200
 </li>
 <li><strong>Interprétation</strong> : <ul>
 <li>Le score <code>answer_relevancy</code> à <code>0.0</code> est cohérent : Ragas détecte que la réponse, qui est un refus prudent, n’est pas alignée avec la demande de restaurant. </li>
+<li>Le <code>faithfulness</code> à <code>0.000</code> reflète le même phénomène : un refus prudent ne reprend aucun chunk du contexte, Ragas ne trouve donc aucune affirmation à rattacher aux sources. </li>
 <li>Le <code>status</code> maison reste <code>partial</code> parce que des sources sont remontées. </li>
 <li>La détection automatique du hors sujet côté chaîne RAG reste donc perfectible.</li>
 </ul>
