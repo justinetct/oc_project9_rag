@@ -88,10 +88,10 @@ def test_compute_event_recall_partial_match() -> None:
     assert recall == 0.5
 
 
-def test_compute_event_recall_no_expected_returns_one_when_no_sources() -> None:
-    """Cas hors sujet : 1.0 si aucune source retournée, 0.0 sinon."""
-    assert evaluate_rag.compute_event_recall([], []) == 1.0
-    assert evaluate_rag.compute_event_recall(["evt-1"], []) == 0.0
+def test_compute_event_recall_no_expected_returns_none() -> None:
+    """Cas hors sujet : event_recall non applicable (None), avec ou sans sources."""
+    assert evaluate_rag.compute_event_recall([], []) is None
+    assert evaluate_rag.compute_event_recall(["evt-1"], []) is None
 
 
 def test_determine_status_out_of_scope_ok_when_no_sources() -> None:
@@ -193,7 +193,7 @@ def test_summarize_results_handles_empty_list() -> None:
         "partial": 0,
         "ko": 0,
         "average_keyword_match_rate": 0.0,
-        "average_event_recall": 0.0,
+        "average_event_recall": None,
     }
 
 

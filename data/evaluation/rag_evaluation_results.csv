@@ -90,4 +90,4 @@ Peux-tu me conseiller un restaurant à Arcachon ?,Le système doit répondre pru
 
 En revanche, si tu veux des idées d'événements culturels à Arcachon, je peux te proposer :
 - **Mai à vélo Sud Bassin — Le Teich** (16 mai 2026) avec une pause déjeuner conviviale à Arcachon (pique-nique).
-- **Je me laisse porter - Saison 6** (10 mai 2026) à Biganos, un micro-festival mêlant musique, danse et arts de la rue.",restaurant;hors sujet;contexte insuffisant,restaurant,0.333,,,0.0,4,0.667,0.0,0.806,1.0,partial,Cas hors sujet : le système doit refuser d'inventer.
+- **Je me laisse porter - Saison 6** (10 mai 2026) à Biganos, un micro-festival mêlant musique, danse et arts de la rue.",restaurant;hors sujet;contexte insuffisant,restaurant,0.333,,,,4,0.667,0.0,0.806,1.0,partial,Cas hors sujet : le système doit refuser d'inventer.

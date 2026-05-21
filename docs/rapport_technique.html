@@ -668,7 +668,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 
 <h2 id="1-objectifs-du-projet">1. Objectifs du projet</h2>
 <h3 id="contexte">Contexte</h3>
-<p>Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon, à partir de données issues d’<a href="https://openagenda.com/">OpenAgenda</a> exposées via Opendatasoft.</p>
+<p>Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon, à partir de données issues d’<a href="https://public.opendatasoft.com/explore/assets/evenements-publics-openagenda/view/">OpenAgenda</a> exposées via Opendatasoft.</p>
 <p>Le projet consiste à concevoir un système RAG, c’est-à-dire un système qui combine :</p>
 <ul>
 <li>une base documentaire construite à partir d’événements OpenAgenda ;</li>
@@ -697,7 +697,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <li>générer des embeddings ;</li>
 <li>construire un index vectoriel FAISS ;</li>
 <li>tester la recherche sémantique ;</li>
-<li>préparer l’intégration avec un modèle de langage ;</li>
+<li>intégrer un modèle de langage pour générer les réponses ;</li>
 <li>exposer le système via une API.</li>
 </ul>
 <h3 id="périmètre">Périmètre</h3>
@@ -758,10 +758,14 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <p>Exemple court de document indexable :</p>
 <div class="highlight"><pre><span></span><code><span class="gh"># Initiation à l&#39;astronomie à Lanton</span>
 
-Ville : Lanton
-Date : 5 janvier 2026
+<span class="gu">## Description</span>
 
-Découverte du ciel et initiation à l&#39;observation astronomique.
+Initiation à l&#39;astronomie et observation aux instruments.
+
+<span class="gu">## Informations pratiques</span>
+
+<span class="k">-</span><span class="w"> </span>Ville : Lanton
+<span class="k">-</span><span class="w"> </span>Dates : du 2026-01-05 19:30 au 2027-01-03 21:30
 </code></pre></div>
 
 <p>Ces documents sont ensuite découpés en chunks, puis vectorisés avec le modèle d’embedding Mistral.</p>
@@ -785,20 +789,18 @@ Animation autour de l&#39;observation astronomique.
 </code></pre></div>
 
 <p>Le message utilisateur final combine ensuite ce contexte avec la question :</p>
-<div class="highlight"><pre><span></span><code>Contexte :
+<div class="highlight"><pre><span></span><code>Contexte (extraits d&#39;événements) :
 [1] Initiation à l&#39;astronomie — Lanton
 ...
 
-Question :
+Question de l&#39;utilisateur :
 Quels événements autour de l&#39;astronomie sont proposés ?
 </code></pre></div>
 
-<p>Cette numérotation facilite la traçabilité entre les chunks retrouvés, la réponse générée et les sources affichées.</p>
 <p>Le modèle de génération utilisé est <code class="badge-tech">mistral-small-latest</code>, configurable via la variable d’environnement <code>MISTRAL_MODEL</code>. Le client Mistral est créé uniquement au moment de générer une réponse, ce qui permet d’instancier <code>RagService</code> sans clé API en environnement de test.</p>
 <h3 id="exposition-via-api">Exposition via API</h3>
 <p>L’API FastAPI est implémentée dans <a href="../echo_app/api/"><code>echo_app/api/</code></a>. Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question au chatbot et reconstruction locale de l’index.</p>
 <p>La logique RAG reste isolée dans <code>echo_app/rag/rag_service.py</code> : l’API ne fait que valider les requêtes, appeler le service métier et formater les réponses. Les endpoints, les formats de requête/réponse et les choix de gestion d’erreur sont détaillés dans la section <a href="#6-api-et-endpoints-exposés">6. API et endpoints exposés</a>.</p>
-<div class="callout callout-warning"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span class="callout-label">Attention</span></div><div class="callout-body"><p><code>POST /rebuild</code> est utile pour le POC local, mais il devrait être protégé ou remplacé par une tâche interne si l’API était exposée en production.</p></div></div>
 <h3 id="technologies-utilisées">Technologies utilisées</h3>
 <p>Les principales technologies utilisées sont :</p>
 <ul>
@@ -819,10 +821,18 @@ Quels événements autour de l&#39;astronomie sont proposés ?
 <div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Une date de référence fixe (<code>2026-05-01</code>) est utilisée pour rendre le POC reproductible et obtenir des résultats stables pendant le développement.</p></div></div>
 <p>Exemple simplifié de donnée OpenAgenda avant préparation :</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie à Lanton&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;title_fr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie à Lanton&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;location_city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lanton&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;p&gt;Découverte du ciel...&lt;/p&gt;&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;firstdate_begin&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span>
+<span class="w">  </span><span class="nt">&quot;firstdate_begin&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description_fr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initiation à l&#39;astronomie et observation aux instruments.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;longdescription_fr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;p&gt;✨ Découvrez le ciel nocturne comme vous ne l’avez jamais observé 🌙🔭&lt;/p&gt;\n&lt;p&gt;Lors de cette &lt;strong&gt;soirée d’observation du ciel&lt;/strong&gt;, laissez-vous émerveiller par les beautés cachées de l’espace, visibles uniquement grâce aux &lt;strong&gt;télescopes et aux jumelles astronomiques&lt;/strong&gt;.&lt;br&gt;Planètes, galaxies, nébuleuses… vous découvrirez les plus beaux objets célestes du moment.&lt;/p&gt;\n&lt;p&gt;Tout au long de la soirée, vous comprendrez :&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;le &lt;strong&gt;parcours de vie d’une étoile&lt;/strong&gt;, de sa naissance à sa fin&lt;/li&gt;\n&lt;li&gt;les grands principes de la &lt;strong&gt;mécanique céleste&lt;/strong&gt; et le déplacement apparent des astres&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;Vous apprendrez également à :&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;reconnaître plusieurs &lt;strong&gt;constellations&lt;/strong&gt;, et peut-être celle de votre &lt;strong&gt;signe zodiacal&lt;/strong&gt; si elle est visible&lt;/li&gt;\n&lt;li&gt;découvrir les &lt;strong&gt;mythes et légendes&lt;/strong&gt; associés aux constellations&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;Des &lt;strong&gt;expériences simples et ludiques&lt;/strong&gt; viendront accompagner les explications pour mieux comprendre le fonctionnement de notre ciel.&lt;/p&gt;\n&lt;p&gt;Ce sera aussi l’occasion de :&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;découvrir &lt;strong&gt;comment fonctionne un télescope&lt;/strong&gt;&lt;/li&gt;\n&lt;li&gt;poser toutes vos questions si vous envisagez d’en acquérir un, afin de faire un choix éclairé&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;Dans une ambiance conviviale et un cadre naturel inhabituel, cette soirée est une invitation à &lt;strong&gt;lever les yeux vers les étoiles&lt;/strong&gt;, à se détendre et à partager un moment hors du temps.&lt;/p&gt;\n&lt;p&gt;Durée : 2h30&lt;/p&gt;\n&lt;p&gt;Activité organisée par Arnaud - Animateur scientifique&lt;/p&gt;\n&lt;p&gt;Infos et réservation sur &lt;a href=\&quot;https://www.eco-nature.org/experience/initiation-a-l-astronomie-a-lanton-3725\&quot;&gt;EcoNature : &lt;/a&gt;&lt;a href=\&quot;https://www.eco-nature.org/experience/initiation-a-l-astronomie-a-lanton-3725\&quot;&gt;https://www.eco-nature.org/experience/initiation-a-l-astronomie-a-lanton-3725&lt;/a&gt;&lt;/p&gt;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;conditions_fr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tarifs : Enfant -18 ans 10€ ; Adulte 18 ans et + 20€&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;keywords_fr&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;Nature&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;Sortie nature&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;astronomie&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://cdn.openagenda.com/main/7d4acecf130c4c8cae6f20fcc5c64d56.base.image.jpg&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -839,7 +849,7 @@ Quels événements autour de l&#39;astronomie sont proposés ?
 <li>suppression des liens bruts répétés dans le texte indexable.</li>
 </ul>
 <p>Les URL ne sont pas intégrées dans le texte indexable. Elles sont conservées dans les métadonnées afin de pouvoir être affichées après la recherche.</p>
-<p>Par exemple, un fragment HTML comme <code>&lt;p&gt;Découverte du ciel...&lt;/p&gt;</code> est converti en texte simple : <code>Découverte du ciel...</code>.</p>
+<p>Par exemple, un fragment HTML comme <code>&lt;p&gt;✨ Découvrez le ciel...&lt;/p&gt;</code> est converti en texte simple : <code>✨ Découvrez le ciel...</code>.</p>
 <h3 id="construction-des-documents-rag">Construction des documents RAG</h3>
 <p>Chaque événement est transformé en document RAG.</p>
 <p>Chaque document contient :</p>
@@ -854,8 +864,8 @@ Quels événements autour de l&#39;astronomie sont proposés ?
 <span class="w">  </span><span class="nt">&quot;city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lanton&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;start_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-05T19:30:00+00:00&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://openagenda.com/...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;latitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">44.704</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;longitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-1.039</span>
+<span class="w">  </span><span class="nt">&quot;latitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">44.783281</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;longitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-0.934394</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -863,11 +873,14 @@ Quels événements autour de l&#39;astronomie sont proposés ?
 <p>Exemple court de document Markdown produit pour l’indexation :</p>
 <div class="highlight"><pre><span></span><code><span class="gh"># Initiation à l&#39;astronomie à Lanton</span>
 
-Ville : Lanton
-Date : 5 janvier 2026
-Lieu : Lanton
+<span class="gu">## Description</span>
 
-Découverte du ciel et initiation à l&#39;observation astronomique.
+Initiation à l&#39;astronomie et observation aux instruments.
+
+<span class="gu">## Informations pratiques</span>
+
+<span class="k">-</span><span class="w"> </span>Ville : Lanton
+<span class="k">-</span><span class="w"> </span>Dates : du 2026-01-05 19:30 au 2027-01-03 21:30
 </code></pre></div>
 
 <h3 id="chunking">Chunking</h3>
@@ -887,7 +900,7 @@ CHUNK_OVERLAP = 150
 MIN_CHUNK_SIZE = 200
 </code></pre></div>
 
-<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Cette stratégie a été retenue car le corpus OpenAgenda utilisé <strong>contient majoritairement des documents courts</strong>. Un découpage plus complexe, par structure Markdown ou par phrases avec spaCy, a été exploré dans le notebook, mais il n’a pas été conservé dans le pipeline principal afin de garder une solution simple, robuste et facile à maintenir.</p></div></div>
+<div class="callout callout-note"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><span class="callout-label">Note</span></div><div class="callout-body"><p>Cette stratégie a été retenue car le corpus OpenAgenda utilisé <strong>contient majoritairement des documents courts</strong>. Un découpage par structure Markdown n’a pas été conservé car il risquait de séparer des informations importantes d’un même événement. Un découpage par phrases avec spaCy aurait aussi ajouté de la complexité sans apporter de gain évident pour ce POC.</p></div></div>
 <h3 id="génération-des-embeddings">Génération des embeddings</h3>
 <p>Chaque chunk est transformé en vecteur numérique avec le modèle d’embedding Mistral.</p>
 <p>Le modèle utilisé est <code class="badge-tech">mistral-embed</code>, qui produit des vecteurs de dimension <code>1024</code>.</p>
@@ -909,11 +922,11 @@ MIN_CHUNK_SIZE = 200
 <p>Le modèle de génération est utilisé pour produire la réponse finale à partir des chunks retrouvés par la recherche sémantique.</p>
 <p>Le modèle par défaut est : <code class="badge-tech">mistral-small-latest</code>.</p>
 <p>Il est configurable via la variable d’environnement <code>MISTRAL_MODEL</code>. L’appel est effectué via <code>client.chat.complete()</code> de la bibliothèque Python Mistral, dans la méthode <code>_generate_answer()</code> de <code>RagService</code>. Cette méthode est isolée pour faciliter les tests avec un faux client Mistral.</p>
-<div class="callout callout-important"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18L12 3 3 21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span class="callout-label">Important</span></div><div class="callout-body"><p><strong>Résilience face aux erreurs Mistral</strong></p><p>Mistral peut renvoyer ponctuellement un HTTP <code>429</code> avec le message <code>service_tier_capacity_exceeded</code> lorsque le modèle est temporairement saturé côté serveur. Pour absorber ces pics, <code>_generate_answer()</code> retente l’appel une seule fois après 2 secondes lorsque l’erreur correspond à ce cas, et laisse remonter toute autre exception sans retry. Cette stratégie est volontairement simple (pas de backoff exponentiel ni de bibliothèque externe) et reste facile à expliquer.</p></div></div>
+<div class="callout callout-important"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18L12 3 3 21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span class="callout-label">Important</span></div><div class="callout-body"><p><strong>Résilience face aux erreurs Mistral</strong></p><p>Mistral peut renvoyer ponctuellement un HTTP <code>429</code> avec le message <code>service_tier_capacity_exceeded</code> lorsque le modèle est temporairement saturé côté serveur. Pour absorber ces pics, <code>_generate_answer()</code> retente l’appel une seule fois après 2 secondes lorsque l’erreur correspond à ce cas, et laisse remonter toute autre exception sans retry.</p></div></div>
 <h3 id="prompting">Prompting</h3>
 <p>Les prompts sont versionnés dans <code>echo_app/rag/prompts.py</code> :</p>
 <ul>
-<li><code>RAG_SYSTEM_PROMPT</code> contient les règles générales du chatbot ;</li>
+<li><code>RAG_SYSTEM_PROMPT</code> contient les règles générales du chatbot (voir <a href="#prompt-système-utilisé">Prompt système utilisé</a> en annexe) ;</li>
 <li><code>build_user_prompt()</code> construit le message utilisateur à partir du contexte retrouvé et de la question.</li>
 </ul>
 <p>Cette séparation permet de faire évoluer le cadrage métier sans modifier directement le service RAG.</p>
@@ -1063,6 +1076,7 @@ MIN_CHUNK_SIZE = 200
 </tbody>
 </table>
 <p>La documentation interactive Swagger est générée automatiquement par FastAPI et disponible sur <code>/docs</code> lorsque l’API est lancée localement.</p>
+<div class="callout callout-warning"><div class="callout-header"><span class="callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span class="callout-label">Attention</span></div><div class="callout-body"><p><code>POST /rebuild</code> est utile pour le POC local, mais il devrait être protégé ou remplacé par une tâche interne si l’API était exposée en production.</p></div></div>
 <h3 id="séparation-api-logique-métier">Séparation API / logique métier</h3>
 <p>La couche API ne réimplémente pas la logique RAG. L’endpoint <code>POST /ask</code> appelle directement <code>RagService.ask(question)</code>, qui orchestre le retriever FAISS LangChain, la construction du contexte, le prompt LangChain et l’appel Mistral.</p>
 <p>La reconstruction de l’index est portée par <code>echo_app.indexing.rebuild.rebuild_index()</code>. Cette fonction est utilisée à la fois par le script CLI <code>scripts/rebuild_index.py</code> et par l’endpoint <code>POST /rebuild</code>, ce qui évite de dupliquer la logique.</p>
@@ -1246,7 +1260,7 @@ MIN_CHUNK_SIZE = 200
 </tr>
 <tr>
 <td><code>event_recall</code> moyen</td>
-<td style="text-align: right;">0.811</td>
+<td style="text-align: right;">0.869</td>
 </tr>
 <tr>
 <td><code>faithfulness</code> moyen</td>
@@ -1279,7 +1293,7 @@ MIN_CHUNK_SIZE = 200
 <li><strong>Observation</strong> : le système répond prudemment, mais 4 sources sont tout de même remontées.</li>
 <li><strong>Métriques maison</strong> : <ul>
 <li><code>keyword_match_rate = 0.333</code>, </li>
-<li><code>event_recall = 0</code> (aucun événement attendu pour ce cas hors sujet).</li>
+<li><code>event_recall</code> non applicable (aucun événement attendu pour ce cas hors sujet).</li>
 </ul>
 </li>
 <li><strong>Métriques Ragas</strong> : <ul>
@@ -1304,13 +1318,6 @@ MIN_CHUNK_SIZE = 200
 <li>les scores Ragas peuvent légèrement varier d’une exécution à l’autre malgré <code>temperature=0</code> côté juge ;</li>
 <li><code>answer_relevancy</code> utilise <code>strictness=1</code> (1 question alternative générée au lieu de 3 par défaut), ce qui rend le score un peu moins stable mais évite le bug d’agrégation avec <code>langchain-mistralai 1.1.4</code> ;</li>
 <li>la détection automatique du hors sujet reste perfectible côté chaîne RAG (le seul cas <code>partial</code> est lié à ce point).</li>
-</ul>
-<p>Les améliorations réalistes seraient :</p>
-<ul>
-<li>ajouter des filtres par commune, date ou gratuité ;</li>
-<li>améliorer la détection des questions hors sujet ;</li>
-<li>ajouter un reranking pour mieux sélectionner les événements les plus pertinents ;</li>
-<li>enrichir le jeu de test annoté avec davantage de cas.</li>
 </ul>
 <h3 id="validation-technique">Validation technique</h3>
 <p>La recherche sémantique peut être vérifiée manuellement avec le script suivant :</p>
@@ -1353,8 +1360,7 @@ MIN_CHUNK_SIZE = 200
 <li>les événements très courts donnent parfois peu de contexte au modèle d’embedding ;</li>
 <li>la recherche sémantique brute ne gère pas encore parfaitement les requêtes composées ;</li>
 <li>les filtres métier par date, commune ou gratuité ne sont pas appliqués directement dans la recherche ;</li>
-<li>l’index doit être reconstruit lorsque les données changent ;</li>
-<li>l’endpoint <code>/rebuild</code> est pratique en local, mais devrait être protégé ou externalisé en production.</li>
+<li>l’index doit être reconstruit lorsque les données changent.</li>
 </ul>
 <h3 id="améliorations-possibles">Améliorations possibles</h3>
 <p>Les améliorations possibles sont :</p>
@@ -1377,7 +1383,7 @@ MIN_CHUNK_SIZE = 200
 ├── echo_app/              # Code de l’application Écho
 │   ├── api/               # API FastAPI
 │   ├── indexing/          # Embeddings, FAISS et recherche sémantique
-│   └── rag/               # Chaîne RAG 
+│   └── rag/               # Chaîne RAG
 ├── notebooks/             # Notebooks d’exploration et de validation
 ├── scripts/               # Scripts exécutables du pipeline
 ├── src/                   # Fonctions communes de collecte, nettoyage, documents et chunking
@@ -1508,6 +1514,30 @@ MIN_CHUNK_SIZE = 200
 </code></pre></div>
 
 <p>Cet exemple montre que l’API est disponible, que le vector store est chargé, et que la chaîne RAG retourne une réponse structurée avec sources.</p>
+<h3 id="prompt-système-utilisé">Prompt système utilisé</h3>
+<p>Le prompt système est versionné dans <code>echo_app/rag/prompts.py</code>. Il définit le rôle d’Écho et les règles de réponse du chatbot.</p>
+<div class="highlight"><pre><span></span><code>Tu es Écho, un assistant culturel spécialisé dans les événements autour du
+Bassin d&#39;Arcachon. Tu aides les utilisateurs à découvrir des événements à
+partir d&#39;une base d&#39;événements indexés.
+
+Tu réponds toujours en t&#39;appuyant uniquement sur le contexte d&#39;événements
+fourni ci-dessous. Ce contexte contient une sélection d&#39;extraits issus de la
+base ; il peut être incomplet.
+
+Règles à respecter :
+- Réponds en français, dans un ton clair, utile et bienveillant.
+- Reste concis : 2 à 5 phrases dans la plupart des cas.
+- Ne crée jamais d&#39;événement, de date, de lieu, de prix ou d&#39;URL qui ne
+  serait pas explicitement présent dans le contexte. N&#39;invente rien.
+- Si le contexte ne permet pas de répondre, dis-le clairement à
+  l&#39;utilisateur (par exemple : « Je n&#39;ai pas trouvé d&#39;événement
+  correspondant dans le contexte fourni. »).
+- Cite les événements utilisés en mentionnant leur titre et leur ville
+  lorsque c&#39;est pertinent.
+- Si la question n&#39;a aucun rapport avec les événements culturels présents
+  dans le contexte, indique poliment à l&#39;utilisateur que tu réponds
+  uniquement sur les événements présents dans le contexte fourni.
+</code></pre></div>
     </main>
   </div>
 </body>

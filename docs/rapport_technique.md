@@ -17,7 +17,7 @@
 
 ### Contexte
 
-Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon, à partir de données issues d’[OpenAgenda](https://openagenda.com/) exposées via Opendatasoft.
+Puls-Events souhaite proposer un assistant intelligent capable d’aider les utilisateurs à trouver des événements culturels pertinents autour du Bassin d’Arcachon, à partir de données issues d’[OpenAgenda](https://public.opendatasoft.com/explore/assets/evenements-publics-openagenda/view/) exposées via Opendatasoft.
 
 Le projet consiste à concevoir un système RAG, c’est-à-dire un système qui combine :
 
@@ -53,7 +53,7 @@ Les objectifs principaux sont :
 - générer des embeddings ;
 - construire un index vectoriel FAISS ;
 - tester la recherche sémantique ;
-- préparer l’intégration avec un modèle de langage ;
+- intégrer un modèle de langage pour générer les réponses ;
 - exposer le système via une API.
 
 ### Périmètre
@@ -102,10 +102,14 @@ Exemple court de document indexable :
 ```markdown
 # Initiation à l'astronomie à Lanton
 
-Ville : Lanton
-Date : 5 janvier 2026
+## Description
 
-Découverte du ciel et initiation à l'observation astronomique.
+Initiation à l'astronomie et observation aux instruments.
+
+## Informations pratiques
+
+- Ville : Lanton
+- Dates : du 2026-01-05 19:30 au 2027-01-03 21:30
 ```
 
 Ces documents sont ensuite découpés en chunks, puis vectorisés avec le modèle d’embedding Mistral.
@@ -136,15 +140,13 @@ Animation autour de l'observation astronomique.
 Le message utilisateur final combine ensuite ce contexte avec la question :
 
 ```text
-Contexte :
+Contexte (extraits d'événements) :
 [1] Initiation à l'astronomie — Lanton
 ...
 
-Question :
+Question de l'utilisateur :
 Quels événements autour de l'astronomie sont proposés ?
 ```
-
-Cette numérotation facilite la traçabilité entre les chunks retrouvés, la réponse générée et les sources affichées.
 
 Le modèle de génération utilisé est `mistral-small-latest`, configurable via la variable d’environnement `MISTRAL_MODEL`. Le client Mistral est créé uniquement au moment de générer une réponse, ce qui permet d’instancier `RagService` sans clé API en environnement de test.
 
@@ -153,9 +155,6 @@ Le modèle de génération utilisé est `mistral-small-latest`, configurable via
 L’API FastAPI est implémentée dans [`echo_app/api/`](../echo_app/api/). Elle expose les endpoints nécessaires au POC : vérification de santé, métadonnées techniques, question au chatbot et reconstruction locale de l’index.
 
 La logique RAG reste isolée dans `echo_app/rag/rag_service.py` : l’API ne fait que valider les requêtes, appeler le service métier et formater les réponses. Les endpoints, les formats de requête/réponse et les choix de gestion d’erreur sont détaillés dans la section [6. API et endpoints exposés](#6-api-et-endpoints-exposés).
-
-> [!WARNING]
-> `POST /rebuild` est utile pour le POC local, mais il devrait être protégé ou remplacé par une tâche interne si l’API était exposée en production.
 
 ### Technologies utilisées
 
@@ -185,10 +184,18 @@ Exemple simplifié de donnée OpenAgenda avant préparation :
 
 ```json
 {
-  "title": "Initiation à l'astronomie à Lanton",
+  "title_fr": "Initiation à l'astronomie à Lanton",
   "location_city": "Lanton",
-  "description": "<p>Découverte du ciel...</p>",
-  "firstdate_begin": "2026-01-05T19:30:00+00:00"
+  "firstdate_begin": "2026-01-05T19:30:00+00:00",
+  "description_fr": "Initiation à l'astronomie et observation aux instruments.",
+  "longdescription_fr": "<p>✨ Découvrez le ciel nocturne comme vous ne l’avez jamais observé 🌙🔭</p>\n<p>Lors de cette <strong>soirée d’observation du ciel</strong>, laissez-vous émerveiller par les beautés cachées de l’espace, visibles uniquement grâce aux <strong>télescopes et aux jumelles astronomiques</strong>.<br>Planètes, galaxies, nébuleuses… vous découvrirez les plus beaux objets célestes du moment.</p>\n<p>Tout au long de la soirée, vous comprendrez :</p>\n<ul>\n<li>le <strong>parcours de vie d’une étoile</strong>, de sa naissance à sa fin</li>\n<li>les grands principes de la <strong>mécanique céleste</strong> et le déplacement apparent des astres</li>\n</ul>\n<p>Vous apprendrez également à :</p>\n<ul>\n<li>reconnaître plusieurs <strong>constellations</strong>, et peut-être celle de votre <strong>signe zodiacal</strong> si elle est visible</li>\n<li>découvrir les <strong>mythes et légendes</strong> associés aux constellations</li>\n</ul>\n<p>Des <strong>expériences simples et ludiques</strong> viendront accompagner les explications pour mieux comprendre le fonctionnement de notre ciel.</p>\n<p>Ce sera aussi l’occasion de :</p>\n<ul>\n<li>découvrir <strong>comment fonctionne un télescope</strong></li>\n<li>poser toutes vos questions si vous envisagez d’en acquérir un, afin de faire un choix éclairé</li>\n</ul>\n<p>Dans une ambiance conviviale et un cadre naturel inhabituel, cette soirée est une invitation à <strong>lever les yeux vers les étoiles</strong>, à se détendre et à partager un moment hors du temps.</p>\n<p>Durée : 2h30</p>\n<p>Activité organisée par Arnaud - Animateur scientifique</p>\n<p>Infos et réservation sur <a href=\"https://www.eco-nature.org/experience/initiation-a-l-astronomie-a-lanton-3725\">EcoNature : </a><a href=\"https://www.eco-nature.org/experience/initiation-a-l-astronomie-a-lanton-3725\">https://www.eco-nature.org/experience/initiation-a-l-astronomie-a-lanton-3725</a></p>",
+  "conditions_fr": "Tarifs : Enfant -18 ans 10€ ; Adulte 18 ans et + 20€",
+  "keywords_fr": [
+    "Nature",
+    "Sortie nature",
+    "astronomie"
+  ],
+  "image": "https://cdn.openagenda.com/main/7d4acecf130c4c8cae6f20fcc5c64d56.base.image.jpg",
 }
 ```
 
@@ -208,7 +215,7 @@ Les traitements réalisés incluent notamment :
 
 Les URL ne sont pas intégrées dans le texte indexable. Elles sont conservées dans les métadonnées afin de pouvoir être affichées après la recherche.
 
-Par exemple, un fragment HTML comme `<p>Découverte du ciel...</p>` est converti en texte simple : `Découverte du ciel...`.
+Par exemple, un fragment HTML comme `<p>✨ Découvrez le ciel...</p>` est converti en texte simple : `✨ Découvrez le ciel...`.
 
 ### Construction des documents RAG
 
@@ -228,8 +235,8 @@ Exemple de métadonnées conservées avec le document :
   "city": "Lanton",
   "start_date": "2026-01-05T19:30:00+00:00",
   "url": "https://openagenda.com/...",
-  "latitude": 44.704,
-  "longitude": -1.039
+  "latitude": 44.783281,
+  "longitude": -0.934394
 }
 ```
 
@@ -240,11 +247,14 @@ Exemple court de document Markdown produit pour l’indexation :
 ```markdown
 # Initiation à l'astronomie à Lanton
 
-Ville : Lanton
-Date : 5 janvier 2026
-Lieu : Lanton
+## Description
 
-Découverte du ciel et initiation à l'observation astronomique.
+Initiation à l'astronomie et observation aux instruments.
+
+## Informations pratiques
+
+- Ville : Lanton
+- Dates : du 2026-01-05 19:30 au 2027-01-03 21:30
 ```
 
 ### Chunking
@@ -269,7 +279,7 @@ CHUNK_OVERLAP = 150
 MIN_CHUNK_SIZE = 200
 ```
 > [!NOTE]
-> Cette stratégie a été retenue car le corpus OpenAgenda utilisé **contient majoritairement des documents courts**. Un découpage plus complexe, par structure Markdown ou par phrases avec spaCy, a été exploré dans le notebook, mais il n’a pas été conservé dans le pipeline principal afin de garder une solution simple, robuste et facile à maintenir.
+> Cette stratégie a été retenue car le corpus OpenAgenda utilisé **contient majoritairement des documents courts**. Un découpage par structure Markdown n’a pas été conservé car il risquait de séparer des informations importantes d’un même événement. Un découpage par phrases avec spaCy aurait aussi ajouté de la complexité sans apporter de gain évident pour ce POC.
 
 ### Génération des embeddings
 
@@ -310,13 +320,13 @@ Il est configurable via la variable d’environnement `MISTRAL_MODEL`. L’appel
 > [!IMPORTANT]
 > **Résilience face aux erreurs Mistral**
 >
-> Mistral peut renvoyer ponctuellement un HTTP `429` avec le message `service_tier_capacity_exceeded` lorsque le modèle est temporairement saturé côté serveur. Pour absorber ces pics, `_generate_answer()` retente l’appel une seule fois après 2 secondes lorsque l’erreur correspond à ce cas, et laisse remonter toute autre exception sans retry. Cette stratégie est volontairement simple (pas de backoff exponentiel ni de bibliothèque externe) et reste facile à expliquer.
+> Mistral peut renvoyer ponctuellement un HTTP `429` avec le message `service_tier_capacity_exceeded` lorsque le modèle est temporairement saturé côté serveur. Pour absorber ces pics, `_generate_answer()` retente l’appel une seule fois après 2 secondes lorsque l’erreur correspond à ce cas, et laisse remonter toute autre exception sans retry.
 
 ### Prompting
 
 Les prompts sont versionnés dans `echo_app/rag/prompts.py` :
 
-- `RAG_SYSTEM_PROMPT` contient les règles générales du chatbot ;
+- `RAG_SYSTEM_PROMPT` contient les règles générales du chatbot (voir [Prompt système utilisé](#prompt-système-utilisé) en annexe) ;
 - `build_user_prompt()` construit le message utilisateur à partir du contexte retrouvé et de la question.
 
 Cette séparation permet de faire évoluer le cadrage métier sans modifier directement le service RAG.
@@ -452,6 +462,9 @@ L’API expose quatre endpoints principaux :
 | `POST /rebuild` | Reconstruit localement l’index FAISS avec une confirmation explicite (`confirm=true`). |
 
 La documentation interactive Swagger est générée automatiquement par FastAPI et disponible sur `/docs` lorsque l’API est lancée localement.
+
+> [!WARNING]
+> `POST /rebuild` est utile pour le POC local, mais il devrait être protégé ou remplacé par une tâche interne si l’API était exposée en production.
 
 ### Séparation API / logique métier
 
@@ -593,7 +606,7 @@ L’évaluation lancée sur les 15 questions annotées avec le pipeline final do
 | `partial` | 1 |
 | `ko` | 0 |
 | `keyword_match_rate` moyen | 0.830 |
-| `event_recall` moyen | 0.811 |
+| `event_recall` moyen | 0.869 |
 | `faithfulness` moyen | 0.927 |
 | `answer_relevancy` moyen | 0.828 |
 | `context_precision` moyen | 0.942 |
@@ -613,7 +626,7 @@ Une seule question est classée `partial` :
 - **Observation** : le système répond prudemment, mais 4 sources sont tout de même remontées.
 - **Métriques maison** : 
   - `keyword_match_rate = 0.333`, 
-  - `event_recall = 0` (aucun événement attendu pour ce cas hors sujet).
+  - `event_recall` non applicable (aucun événement attendu pour ce cas hors sujet).
 - **Métriques Ragas** : 
   - `faithfulness = 0.667`,
   - `context_precision = 0.806`, 
@@ -634,13 +647,6 @@ Une seule question est classée `partial` :
 - les scores Ragas peuvent légèrement varier d’une exécution à l’autre malgré `temperature=0` côté juge ;
 - `answer_relevancy` utilise `strictness=1` (1 question alternative générée au lieu de 3 par défaut), ce qui rend le score un peu moins stable mais évite le bug d’agrégation avec `langchain-mistralai 1.1.4` ;
 - la détection automatique du hors sujet reste perfectible côté chaîne RAG (le seul cas `partial` est lié à ce point).
-
-Les améliorations réalistes seraient :
-
-- ajouter des filtres par commune, date ou gratuité ;
-- améliorer la détection des questions hors sujet ;
-- ajouter un reranking pour mieux sélectionner les événements les plus pertinents ;
-- enrichir le jeu de test annoté avec davantage de cas.
 
 ### Validation technique
 
@@ -696,8 +702,7 @@ Le POC présente plusieurs limites :
 - les événements très courts donnent parfois peu de contexte au modèle d’embedding ;
 - la recherche sémantique brute ne gère pas encore parfaitement les requêtes composées ;
 - les filtres métier par date, commune ou gratuité ne sont pas appliqués directement dans la recherche ;
-- l’index doit être reconstruit lorsque les données changent ;
-- l’endpoint `/rebuild` est pratique en local, mais devrait être protégé ou externalisé en production.
+- l’index doit être reconstruit lorsque les données changent.
 
 ### Améliorations possibles
 
@@ -724,7 +729,7 @@ oc_project9_rag/
 ├── echo_app/              # Code de l’application Écho
 │   ├── api/               # API FastAPI
 │   ├── indexing/          # Embeddings, FAISS et recherche sémantique
-│   └── rag/               # Chaîne RAG 
+│   └── rag/               # Chaîne RAG
 ├── notebooks/             # Notebooks d’exploration et de validation
 ├── scripts/               # Scripts exécutables du pipeline
 ├── src/                   # Fonctions communes de collecte, nettoyage, documents et chunking
@@ -869,3 +874,31 @@ Extrait de réponse obtenue :
 ```
 
 Cet exemple montre que l’API est disponible, que le vector store est chargé, et que la chaîne RAG retourne une réponse structurée avec sources.
+
+### Prompt système utilisé
+
+Le prompt système est versionné dans `echo_app/rag/prompts.py`. Il définit le rôle d’Écho et les règles de réponse du chatbot.
+
+```text
+Tu es Écho, un assistant culturel spécialisé dans les événements autour du
+Bassin d'Arcachon. Tu aides les utilisateurs à découvrir des événements à
+partir d'une base d'événements indexés.
+
+Tu réponds toujours en t'appuyant uniquement sur le contexte d'événements
+fourni ci-dessous. Ce contexte contient une sélection d'extraits issus de la
+base ; il peut être incomplet.
+
+Règles à respecter :
+- Réponds en français, dans un ton clair, utile et bienveillant.
+- Reste concis : 2 à 5 phrases dans la plupart des cas.
+- Ne crée jamais d'événement, de date, de lieu, de prix ou d'URL qui ne
+  serait pas explicitement présent dans le contexte. N'invente rien.
+- Si le contexte ne permet pas de répondre, dis-le clairement à
+  l'utilisateur (par exemple : « Je n'ai pas trouvé d'événement
+  correspondant dans le contexte fourni. »).
+- Cite les événements utilisés en mentionnant leur titre et leur ville
+  lorsque c'est pertinent.
+- Si la question n'a aucun rapport avec les événements culturels présents
+  dans le contexte, indique poliment à l'utilisateur que tu réponds
+  uniquement sur les événements présents dans le contexte fourni.
+```
