@@ -2,8 +2,8 @@
 
 Tous les tests sont locaux : aucun appel réseau, aucune dépendance à la
 clé MISTRAL_API_KEY. Le retriever LangChain et l'appel Mistral sont
-mockés via monkeypatch (le retriever est injecté directement sur
-l'instance ``RagService``).
+mockés via monkeypatch (un faux retriever est injecté directement
+sur l'instance ``RagService``).
 """
 
 import sys
@@ -38,16 +38,38 @@ def _make_capacity_error() -> Exception:
     )
 
 
-class FakeRetriever:
-    """Retriever minimal compatible LangChain pour les tests.
+class FakeVectorStore:
+    """Vector store factice : seul ``similarity_search_with_score`` est utilisé.
 
-    Implémente uniquement ``.invoke(query)`` car c'est tout ce que
-    ``RagService.ask()`` utilise.
+    Exposé par ``FakeRetriever.vectorstore`` ; ``RagService.ask()`` s'en
+    sert uniquement pour récupérer les distances L2 du filtre.
     """
 
-    def __init__(self, documents: list[Document]) -> None:
+    def __init__(self, hits: list[tuple[Document, float]]) -> None:
+        self.hits = hits
+
+    def similarity_search_with_score(
+        self, query: str, k: int = 5
+    ) -> list[tuple[Document, float]]:
+        return self.hits[:k]
+
+
+class FakeRetriever:
+    """Retriever LangChain factice : ``.invoke()`` + accès ``.vectorstore``.
+
+    ``RagService.ask()`` appelle ``retriever.invoke(question)`` pour les
+    chunks, puis ``retriever.vectorstore.similarity_search_with_score()``
+    pour les distances L2.
+    """
+
+    def __init__(
+        self,
+        documents: list[Document],
+        hits: list[tuple[Document, float]] | None = None,
+    ) -> None:
         self.documents = documents
         self.calls: list[str] = []
+        self.vectorstore = FakeVectorStore(hits if hits is not None else [])
 
     def invoke(self, query: str) -> list[Document]:
         self.calls.append(query)
@@ -97,10 +119,24 @@ def make_fake_documents() -> list[Document]:
     ]
 
 
+def make_fake_hits() -> list[tuple[Document, float]]:
+    """Trois hits ``(Document, distance L2)`` aux distances rapprochées.
+
+    evt-1 (×2 chunks) puis evt-2 ; les écarts sont faibles pour que le
+    filtre par écart L2 conserve les deux sources.
+    """
+    documents = make_fake_documents()
+    return [
+        (documents[0], 0.30),
+        (documents[1], 0.32),
+        (documents[2], 0.34),
+    ]
+
+
 def test_ask_raises_when_question_is_empty() -> None:
     """Une question vide ou composée d'espaces doit être rejetée clairement."""
     service = RagService()
-    service._retriever = FakeRetriever(documents=make_fake_documents())
+    service._retriever = FakeRetriever(make_fake_documents(), make_fake_hits())
     with pytest.raises(ValueError, match="question est vide"):
         service.ask("   ")
 
@@ -152,7 +188,7 @@ def test_ask_returns_expected_structure(monkeypatch) -> None:
 
     monkeypatch.setattr(RagService, "_generate_answer", fake_generate_answer)
 
-    fake_retriever = FakeRetriever(documents=make_fake_documents())
+    fake_retriever = FakeRetriever(make_fake_documents(), make_fake_hits())
     service = RagService(top_k=3)
     service._retriever = fake_retriever
 
@@ -187,7 +223,7 @@ def test_ask_short_circuits_when_no_documents(monkeypatch) -> None:
     monkeypatch.setattr(RagService, "_generate_answer", fail_if_called)
 
     service = RagService()
-    service._retriever = FakeRetriever(documents=[])
+    service._retriever = FakeRetriever([])
 
     response = service.ask("événement complètement inconnu xyz")
 
@@ -211,7 +247,7 @@ def test_ask_with_include_contexts_returns_raw_chunks(monkeypatch) -> None:
     monkeypatch.setattr(RagService, "_generate_answer", fake_generate_answer)
 
     service = RagService(top_k=3)
-    service._retriever = FakeRetriever(documents=make_fake_documents())
+    service._retriever = FakeRetriever(make_fake_documents(), make_fake_hits())
 
     response = service.ask(
         "Quels événements d'astronomie ?", include_contexts=True
@@ -230,7 +266,7 @@ def test_ask_with_include_contexts_returns_raw_chunks(monkeypatch) -> None:
 def test_ask_with_include_contexts_empty_retrieval_returns_empty_list() -> None:
     """include_contexts=True avec retriever vide doit produire contexts=[]."""
     service = RagService()
-    service._retriever = FakeRetriever(documents=[])
+    service._retriever = FakeRetriever([])
 
     response = service.ask("question hors sujet xyz", include_contexts=True)
 
@@ -247,7 +283,7 @@ def test_ask_default_does_not_expose_contexts(monkeypatch) -> None:
     monkeypatch.setattr(RagService, "_generate_answer", fake_generate_answer)
 
     service = RagService(top_k=3)
-    service._retriever = FakeRetriever(documents=make_fake_documents())
+    service._retriever = FakeRetriever(make_fake_documents(), make_fake_hits())
 
     response = service.ask("Quels événements d'astronomie ?")
 
@@ -316,3 +352,65 @@ def test_generate_answer_raises_after_two_capacity_errors(monkeypatch) -> None:
         service._generate_answer([{"role": "user", "content": "hi"}])
 
     assert calls["count"] == 2
+
+
+def test_filter_documents_by_l2_gap_cuts_at_large_gap() -> None:
+    """Un grand écart de L2 écarte la source lointaine et les suivantes."""
+    documents = make_fake_documents()  # evt-1, evt-1, evt-2
+    hits = [
+        (documents[0], 0.30),
+        (documents[1], 0.33),
+        (documents[2], 0.55),  # evt-2 : écart +0.22 > seuil
+    ]
+
+    filtered = rag_service.filter_documents_by_l2_gap(documents, hits, threshold=0.10)
+
+    assert len(filtered) == 2
+    assert {doc.metadata["event_id"] for doc in filtered} == {"evt-1"}
+
+
+def test_filter_documents_by_l2_gap_keeps_close_sources() -> None:
+    """Des sources proches en distance L2 sont toutes conservées."""
+    documents = make_fake_documents()
+    hits = [
+        (documents[0], 0.30),
+        (documents[1], 0.33),
+        (documents[2], 0.38),  # écart evt-1 → evt-2 = +0.08 <= seuil
+    ]
+
+    filtered = rag_service.filter_documents_by_l2_gap(documents, hits, threshold=0.10)
+
+    assert len(filtered) == 3
+    assert {doc.metadata["event_id"] for doc in filtered} == {"evt-1", "evt-2"}
+
+
+def test_filter_documents_by_l2_gap_handles_empty_hits() -> None:
+    """Une liste de hits vide renvoie une liste vide."""
+    assert rag_service.filter_documents_by_l2_gap([], [], threshold=0.10) == []
+
+
+def test_ask_drops_far_source_by_l2_gap(monkeypatch) -> None:
+    """ask() applique le filtre : une source trop lointaine est écartée."""
+
+    def fake_generate_answer(self, messages: list[dict]) -> str:
+        return "Réponse simulée par le mock."
+
+    monkeypatch.setattr(RagService, "_generate_answer", fake_generate_answer)
+
+    documents = make_fake_documents()  # evt-1 ×2, evt-2 ×1
+    hits = [
+        (documents[0], 0.30),
+        (documents[1], 0.33),
+        (documents[2], 0.60),  # evt-2 lointain : écart > seuil
+    ]
+    service = RagService(top_k=3)
+    service._retriever = FakeRetriever(documents, hits)
+
+    response = service.ask(
+        "Quels événements d'astronomie ?", include_contexts=True
+    )
+
+    # evt-2 écarté → une seule source, deux contextes (les 2 chunks evt-1).
+    assert len(response["sources"]) == 1
+    assert response["sources"][0]["event_id"] == "evt-1"
+    assert len(response["contexts"]) == 2

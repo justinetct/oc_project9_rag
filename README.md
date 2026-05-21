@@ -185,11 +185,11 @@ echo_app/indexing/search.py                     17      0   100%
 echo_app/rag/__init__.py                         4      0   100%
 echo_app/rag/langchain_chain.py                 12      0   100%
 echo_app/rag/prompts.py                          4      0   100%
-echo_app/rag/rag_service.py                     87      5    94%   69, 135-137, 149
+echo_app/rag/rag_service.py                    114      5    96%   75, 194-196, 208
 echo_app/rag/ragas_compat.py                     7      5    29%   26-33
 --------------------------------------------------------------------------
-TOTAL                                          502     59    88%
-============================================================================================================ 146 passed in 1.73s =============================================================================================================
+TOTAL                                          529     59    89%
+============================================================================================================ 150 passed in 1.51s =============================================================================================================
 ```
 
 Structure des tests automatisés :
@@ -226,7 +226,7 @@ Les tests couvrent :
 - l'adaptateur d'embeddings LangChain et le vector store FAISS LangChain ;
 - les prompts métier du chatbot Écho ;
 - l'assemblage des messages LangChain sans appel réseau ;
-- la chaîne RAG avec recherche, construction du contexte, génération mockée et retry sur erreur de capacité Mistral (HTTP 429) ;
+- la chaîne RAG avec recherche, filtrage des sources par écart de distance L2, construction du contexte, génération mockée et retry sur erreur de capacité Mistral (HTTP 429) ;
 - la structure du jeu de test annoté d'évaluation (`data/evaluation/qa_annotated.csv`) ;
 - les fonctions de calcul de l'évaluation RAG : scoring maison, préparation du dataset Ragas, fusion et agrégation des scores Ragas (mocks pandas, sans appel réseau).
 - l'API FastAPI (`/health`, `/ask`, `/rebuild`, validation et erreurs) sans appel réseau ;
