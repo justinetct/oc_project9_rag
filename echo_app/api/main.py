@@ -74,7 +74,7 @@ async def lifespan(_: FastAPI):
 
 
 API_DESCRIPTION = """
-**Écho** est un chatbot culturel développé par **Puls-Events** pour aider les
+**Écho** est un assistant RAG développé pour **Puls-Events** afin d'aider les
 utilisateurs à découvrir des événements culturels autour du **Bassin d'Arcachon**.
 
 Le corpus est construit à partir des événements publics **OpenAgenda** (via
@@ -263,8 +263,8 @@ def ask(request: AskRequest) -> AskResponse:
     - `question` : la question reçue (renvoyée telle quelle).
     - `answer` : la réponse générée par Mistral à partir des chunks pertinents.
       Si aucun chunk n'est retrouvé, la réponse indique l'absence de résultat.
-    - `sources` : liste dédoublonnée par `event_id` des événements ayant servi
-      à la génération (`event_id`, `title`, `city`, `start_date`, `url`).
+    - `sources` : liste dédoublonnée par `event_id` des événements retrouvés
+      et transmis comme contexte (`event_id`, `title`, `city`, `start_date`, `url`).
 
     **Codes d'erreur :**
     - `400` : `question` vide ou composée uniquement d'espaces.
